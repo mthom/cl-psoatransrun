@@ -85,8 +85,6 @@
                                                               :descriptors descriptors))
                   (make-ruleml-oidful-atom :oid (substep oid)
                                            :predicate #1#))
-                 ((ruleml-subclass-rel :sub sub :super super)
-                  (make-ruleml-subclass-rel :sub (walker sub) :super (walker super)))
                  ((ruleml-membership :oid oid
                                      :predicate (ruleml-atom :root root
                                                              :descriptors descriptors))
@@ -407,7 +405,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                ((ruleml-assert :items items)
                 (let ((relationships (kb-relationships term)))
                   (make-ruleml-assert
-                   :items (mapcar #`(objectify (subclass-rewrite (unnest (embedded-objectify %)))
+                   :items (mapcar #`(objectify (unnest (embedded-objectify (subclass-rewrite %)))
                                                relationships)
                                   items))))
                ((ruleml-query :term query)
