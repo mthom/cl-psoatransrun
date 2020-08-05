@@ -44,7 +44,8 @@
      (make-ruleml-or :terms (mapcar #`(map-atom-transformer transformer %) terms)))
     ((ruleml-naf :formula formula)
      (make-ruleml-naf :formula (map-atom-transformer transformer formula)))
-    ((or (ruleml-oidful-atom) (ruleml-membership) (ruleml-atom) (ruleml-expr))
+    ((or (ruleml-oidful-atom) (ruleml-membership) (ruleml-atom) (ruleml-expr)
+         (ruleml-subclass-rel))
      (funcall transformer term))
     (_ term)))
 
@@ -81,6 +82,8 @@
                                                               :descriptors descriptors))
                   (make-ruleml-oidful-atom :oid (substep oid)
                                            :predicate #1#))
+                 ((ruleml-subclass-rel :sub sub :super super)
+                  (make-ruleml-subclass-rel :sub (walker sub) :super (walker super)))
                  ((ruleml-membership :oid oid
                                      :predicate (ruleml-atom :root root
                                                              :descriptors descriptors))
@@ -97,8 +100,7 @@
       (let ((atom (walker atom)))
         (if (null embedded-oids)
             atom
-            (make-ruleml-exists :vars embedded-oids
-                                :formula atom))))))
+            (make-ruleml-exists :vars embedded-oids :formula atom))))))
 
 (defun unnest (term)
   (map-atom-transformer #'-unnest term))
