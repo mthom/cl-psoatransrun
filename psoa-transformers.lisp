@@ -29,9 +29,11 @@
 
 (defun map-atom-transformer (transformer term)
   (match term
-    ((ruleml-implies :conclusion conclusion :condition condition)
-     (make-ruleml-implies :conclusion (map-atom-transformer transformer conclusion)
-                          :condition (map-atom-transformer transformer condition)))
+    ((ruleml-implies :conclusion conc :condition cond)
+     (make-ruleml-implies :conclusion (map-atom-transformer
+                                       #`(funcall transformer % :conclusion t)
+                                       conc)
+                          :condition (map-atom-transformer transformer cond)))
     ((ruleml-forall :vars vars :clause clause)
      (make-ruleml-forall :vars vars
                          :clause (map-atom-transformer transformer clause)))
@@ -47,12 +49,13 @@
     ((or (ruleml-oidful-atom) (ruleml-membership) (ruleml-atom) (ruleml-expr)
          (ruleml-subclass-rel))
      (funcall transformer term))
-    (_ term)))
+    (_
+     term)))
 
 (defun embedded-objectify (term)
   (map-atom-transformer #'-embedded-objectify term))
 
-(defun -embedded-objectify (atom)
+(defun -embedded-objectify (atom &key conclusion &allow-other-keys)
   (let (*in-psoa-rest*
         embedded-oids)
     (declare (special *in-psoa-rest*))
@@ -64,7 +67,7 @@
                (match term
                  ((ruleml-atom :root root :descriptors descriptors)
                   (if *in-psoa-rest*
-                      (let ((oid (if (ground-atom-p term)
+                      (let ((oid (if (and (not conclusion) (ground-atom-p term))
                                      (fresh-constant)
                                      (let ((var (fresh-variable)))
                                        (push var embedded-oids)
@@ -105,7 +108,7 @@
 (defun unnest (term)
   (map-atom-transformer #'-unnest term))
 
-(defun -unnest (term)
+(defun -unnest (term &key &allow-other-keys)
   (let ((trimmed-terms))
     (labels ((check-oid (oid)
                (match oid
