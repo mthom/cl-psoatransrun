@@ -31,9 +31,11 @@
   (match term
     ((ruleml-implies :conclusion conc :condition cond)
      (make-ruleml-implies :conclusion (map-atom-transformer
-                                       #`(funcall transformer % :conclusion t)
+                                       #`(funcall transformer % :positive t)
                                        conc)
-                          :condition (map-atom-transformer transformer cond)))
+                          :condition (map-atom-transformer
+                                      #`(funcall transformer % :negative t)
+                                      cond)))
     ((ruleml-forall :vars vars :clause clause)
      (make-ruleml-forall :vars vars
                          :clause (map-atom-transformer transformer clause)))
@@ -49,15 +51,19 @@
     ((or (ruleml-oidful-atom) (ruleml-membership) (ruleml-atom) (ruleml-expr)
          (ruleml-subclass-rel))
      (funcall transformer term))
-    (_
-     term)))
+    ((ruleml-query :term query)
+     (make-ruleml-query
+      :term
+      (map-atom-transformer #`(funcall transformer % :negative t) query)))
+    (_ term)))
 
 (defun embedded-objectify (term)
   (map-atom-transformer #'-embedded-objectify term))
 
-(defun -embedded-objectify (atom &key conclusion &allow-other-keys)
+(defun -embedded-objectify (atom &key positive negative &allow-other-keys)
   (let (*in-psoa-rest*
-        embedded-oids)
+        embedded-oids
+        (ground-atom-p (ground-atom-p atom)))
     (declare (special *in-psoa-rest*))
     (labels ((substep (term)
                (let ((*in-psoa-rest* t))
@@ -67,7 +73,7 @@
                (match term
                  ((ruleml-atom :root root :descriptors descriptors)
                   (if *in-psoa-rest*
-                      (let ((oid (if (and (not conclusion) (ground-atom-p term))
+                      (let ((oid (if (and (not positive) (not negative) ground-atom-p)
                                      (fresh-constant)
                                      (let ((var (fresh-variable)))
                                        (push var embedded-oids)
@@ -80,24 +86,20 @@
                       (let ((*in-psoa-rest* t))
                         (declare (special *in-psoa-rest*))
                         #1#)))
-                 ((ruleml-oidful-atom :oid oid
-                                      :predicate (ruleml-atom :root root
-                                                              :descriptors descriptors))
-                  (make-ruleml-oidful-atom :oid (substep oid)
-                                           :predicate #1#))
+                 ((ruleml-oidful-atom :oid oid :predicate (ruleml-atom :root root
+                                                                       :descriptors descriptors))
+                  (make-ruleml-oidful-atom :oid (substep oid) :predicate #1#))
                  ((ruleml-membership :oid oid
                                      :predicate (ruleml-atom :root root
                                                              :descriptors descriptors))
-                  (make-ruleml-membership :oid (substep oid)
-                                          :predicate #1#))
+                  (make-ruleml-membership :oid (substep oid) :predicate #1#))
                  ((ruleml-slot :dep dep :name name :filler filler)
                   (make-ruleml-slot :dep dep :name (substep name) :filler (substep filler)))
                  ((ruleml-tuple :dep dep :terms terms)
                   (make-ruleml-tuple :dep dep :terms (mapcar #`(substep %) terms)))
                  ((ruleml-expr :root root :terms terms)
                   (make-ruleml-expr :root root :terms (mapcar #`(substep %) terms)))
-                 (_
-                  term))))
+                 (_ term))))
       (let ((atom (walker atom)))
         (if (null embedded-oids)
             atom
@@ -382,9 +384,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
      (let* ((var   (fresh-variable))
             (head  (make-ruleml-oidful-atom :oid var :predicate super))
             (body  (make-ruleml-oidful-atom :oid var :predicate sub)))
-        (make-ruleml-forall :vars (list var)
-                            :clause (make-ruleml-implies :conclusion head
-                                                         :condition  body))))
+       (make-ruleml-forall :vars (list var)
+                           :clause (make-ruleml-implies :conclusion head
+                                                        :condition  body))))
     ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
      (let* ((var   (fresh-variable))
             (head  (make-ruleml-oidful-atom :oid var :predicate super))
@@ -410,6 +412,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                   items))))
                ((ruleml-query :term query)
                 (let ((relationships (make-hash-table :test #'equal)))
-                  (make-ruleml-query :term (objectify (unnest query) relationships))))
+                  (make-ruleml-query :term (objectify (unnest (embedded-objectify query))
+                                                      relationships))))
                (_ term)))
            (ruleml-document-performatives document))))

@@ -125,7 +125,8 @@
 (defun pprint-ruleml-expr (stream expr)
   (write (ruleml-expr-root expr) :stream stream)
   (pprint-logical-block (stream nil :prefix "(" :suffix ")")
-    (pprint-fill stream (ruleml-expr-terms expr) nil)))
+    (let ((*inside-psoa-rest* t))
+      (pprint-fill stream (ruleml-expr-terms expr) nil))))
 
 (set-pprint-dispatch 'ruleml-expr 'pprint-ruleml-expr)
 
