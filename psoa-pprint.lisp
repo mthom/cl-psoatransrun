@@ -123,6 +123,8 @@
 (set-pprint-dispatch 'ruleml-pname-ln 'pprint-ruleml-pname-ln)
 
 (defun pprint-ruleml-expr (stream expr)
+  (unless *inside-psoa-rest*
+    (write-char #\^ stream))
   (write (ruleml-expr-root expr) :stream stream)
   (pprint-logical-block (stream nil :prefix "(" :suffix ")")
     (let ((*inside-psoa-rest* t))

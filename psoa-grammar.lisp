@@ -87,13 +87,12 @@
     (and (or "Assert" "Group")
          (* (or whitespace comment))
          #\(
-         (* (or rule whitespace comment))
+         (* (or rule expr-long whitespace comment))
          #\)
          (* (or whitespace comment)))
   (:destructure (assert ws1 lparen rules rparen ws2 &bounds start)
     (declare (ignore assert ws1 lparen rparen ws2))
-    (make-ruleml-assert :items (remove nil rules)
-                        :position start)))
+    (make-ruleml-assert :items (remove nil rules) :position start)))
 
 (defrule query
     (and "Query"
