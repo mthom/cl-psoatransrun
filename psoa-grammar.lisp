@@ -138,7 +138,7 @@
                          :position start)))
 
 (defrule head
-    (or atomic head-and head-exists))
+    (or head-and head-exists atomic))
 
 (defrule naf-formula
     (and "Naf"
@@ -159,10 +159,9 @@
          (* (or whitespace comment))
          head
          (* (or whitespace comment))
-         #\)
-         (* (or whitespace comment)))
-  (:destructure (exists vars lparen ws1 formula ws2 rparen ws3 &bounds start)
-    (declare (ignore exists ws1 ws2 lparen ws3 rparen))
+         #\))
+  (:destructure (exists vars lparen ws1 formula ws2 rparen &bounds start)
+    (declare (ignore exists ws1 ws2 lparen rparen))
     (make-ruleml-exists :vars (remove nil vars)
                         :formula formula
                         :position start)))

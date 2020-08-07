@@ -10,12 +10,11 @@
   (make-ruleml-const :contents (string-downcase (format nil "~A" (gensym prefix)))))
 
 (defun ground-atom-p (atom)
-  (let ((is-ground t))
-    (walk-ast atom
-              (lambda (term)
-                (when (ruleml-var-p term)
-                  (setf is-ground nil))))
-    is-ground))
+  (walk-ast atom
+            (lambda (term)
+              (when (ruleml-var-p term)
+                (return-from ground-atom-p nil))))
+  t)
 
 #|
 (walk-ast *
