@@ -220,7 +220,7 @@
                  (forall-clause (make-ruleml-implies :conclusion (loop-fn conclusion #'exists-fn)
                                                      :condition  (loop-fn condition #'oid-fn))))
                 ((ruleml-forall :vars clause-vars :clause clause)
-                 (setf vars (copy-list clause-vars))
+                 (:= vars (copy-list clause-vars))
                  (forall-clause (loop-fn clause subst-fn)))
                 ((ruleml-query :term query)
                  (make-ruleml-query :term (query-fn query)))
