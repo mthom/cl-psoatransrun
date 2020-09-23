@@ -27,6 +27,7 @@
            #:ruleml-query-term
            #:ruleml-naf
            #:ruleml-naf-formula
+           #:ruleml-genvar
            #:ruleml-var
            #:ruleml-var-name
            #:ruleml-slot
@@ -88,6 +89,7 @@
            #:ruleml-assert-p
            #:ruleml-query-p
            #:ruleml-naf-p
+           #:ruleml-genvar-p
            #:ruleml-var-p
            #:ruleml-string-p
            #:ruleml-slot-p
@@ -115,6 +117,7 @@
            #:make-ruleml-assert
            #:make-ruleml-query
            #:make-ruleml-naf
+           #:make-ruleml-genvar
            #:make-ruleml-var
            #:make-ruleml-slot
            #:make-ruleml-tuple
@@ -145,7 +148,7 @@
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
   (:export #:unnest #:objectify)
-  (:shadowing-import-from :trivia trivia.level2:alist))
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:PSOATransRun
   (:use #:cl))

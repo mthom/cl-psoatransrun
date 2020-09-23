@@ -4,7 +4,7 @@
 (named-readtables:in-readtable rutils-readtable)
 
 (defun fresh-variable (&optional (prefix "Var"))
-  (make-ruleml-var :name (format nil "~A" (gensym prefix))))
+  (make-ruleml-genvar :name (format nil "~A" (gensym prefix))))
 
 (defun fresh-constant (&optional (prefix "_"))
   (make-ruleml-const :contents (string-downcase (format nil "~A" (gensym prefix)))))
@@ -377,6 +377,35 @@ is objectify_d(\phi, \omega) if \omega is relational.
         (remhash root relationships))
       relationships)))
 
+(defun -describute (term &key &allow-other-keys)
+  (match term
+    ((ruleml-oidful-atom
+      :oid oid
+      :predicate (ruleml-atom :root root :descriptors descriptors))
+     (let ((terms (cons
+                   (make-ruleml-membership
+                    :oid oid
+                    :predicate root)
+                   (mapcar #`(match %
+                               ((or (ruleml-slot :dep t) (ruleml-tuple :dep t))
+                                (make-ruleml-oidful-atom
+                                 :oid oid
+                                 :predicate (make-ruleml-atom :root root
+                                                              :descriptors (list %))))
+                               ((or (ruleml-slot :dep nil) (ruleml-tuple :dep nil))
+                                (make-ruleml-oidful-atom
+                                 :oid oid
+                                 :predicate (make-ruleml-atom :root (make-ruleml-const :contents "Top")
+                                                              :descriptors (list %)))))
+                           descriptors))))
+       (if (single terms)
+           (first terms)
+           (make-ruleml-and :terms terms))))
+    (_ term)))
+
+(defun describute (term &key &allow-other-keys)
+  (map-atom-transformer #'-describute term))
+
 (defun subclass-rewrite (term)
   (match term
     ((ruleml-subclass-rel :super super :sub sub)
@@ -390,9 +419,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
      (let* ((var   (fresh-variable))
             (head  (make-ruleml-oidful-atom :oid var :predicate super))
             (body  (make-ruleml-oidful-atom :oid var :predicate sub)))
-        (make-ruleml-forall :vars (cons var vars)
-                            :clause (make-ruleml-implies :conclusion head
-                                                         :condition  body))))
+       (make-ruleml-forall :vars (cons var vars)
+                           :clause (make-ruleml-implies :conclusion head
+                                                        :condition  body))))
     (_ term)))
 
 (defun transform (document)
@@ -406,12 +435,19 @@ is objectify_d(\phi, \omega) if \omega is relational.
                ((ruleml-assert :items items)
                 (let ((relationships (kb-relationships term)))
                   (make-ruleml-assert
-                   :items (mapcar #`(objectify (unnest (embedded-objectify (subclass-rewrite %)))
-                                               relationships)
+                   :items (mapcar #`(-> %
+                                        subclass-rewrite
+                                        embedded-objectify
+                                        unnest
+                                        (objectify relationships)
+                                        describute)
                                   items))))
                ((ruleml-query :term query)
                 (let ((relationships (make-hash-table :test #'equal)))
-                  (make-ruleml-query :term (objectify (unnest (embedded-objectify query))
-                                                      relationships))))
+                  (make-ruleml-query :term (-> query
+                                               embedded-objectify
+                                               unnest
+                                               (objectify relationships)
+                                               describute))))
                (_ term)))
            (ruleml-document-performatives document))))

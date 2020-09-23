@@ -42,6 +42,8 @@
 (defstruct (ruleml-var (:include ruleml-ast-node))
   name)
 
+(defstruct (ruleml-genvar (:include ruleml-var)))
+
 (defstruct (ruleml-slot (:include ruleml-ast-node))
   dep
   name
@@ -171,4 +173,5 @@
      (funcall key term))
     ((ruleml-membership :predicate predicate)
      (funcall propagator predicate)
-     (funcall key term))))
+     (funcall key term))
+    (_ term)))

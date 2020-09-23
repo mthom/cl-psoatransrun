@@ -1,6 +1,4 @@
-;;;; PSOATransRun.asd
-
-(asdf:defsystem #:PSOATransRun
+(asdf:defsystem #:psoatransrun
   :description "Describe PSOATransRun here"
   :author "Mark Thom"
   :license  "Specify license here"
