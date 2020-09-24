@@ -6,7 +6,7 @@
 
 (defpackage #:psoa-ast
   (:use #:cl #:trivia)
-  (:export #:walk-ast
+  (:export #:transform-ast
            #:ruleml
            #:ruleml-document
            #:ruleml-document-base

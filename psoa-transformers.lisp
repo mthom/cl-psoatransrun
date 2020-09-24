@@ -9,21 +9,24 @@
 (defun fresh-constant (&optional (prefix "_"))
   (make-ruleml-const :contents (string-downcase (format nil "~A" (gensym prefix)))))
 
+(defun fresh-skolem-constant ()
+  (make-ruleml-const :contents (string-downcase (format nil "_skolem~A" (gensym "")))))
+
 (defun ground-atom-p (atom)
-  (walk-ast atom
-            (lambda (term)
-              (when (ruleml-var-p term)
-                (return-from ground-atom-p nil))))
+  (transform-ast atom
+                 (lambda (term)
+                   (when (ruleml-var-p term)
+                     (return-from ground-atom-p nil))))
   t)
 
 #|
-(walk-ast *
-          (lambda (term)
-             (match term
-              ((ruleml-assert :items items)
-               (make-ruleml-assert :items (mapcar #'unnest items)))
-              (_ term)))
-          #'identity)
+(transform-ast *
+(lambda (term)
+(match term
+((ruleml-assert :items items)
+(make-ruleml-assert :items (mapcar #'unnest items)))
+(_ term)))
+#'identity)
 |#
 
 (defun map-atom-transformer (transformer term)
@@ -175,86 +178,86 @@
             (t (make-ruleml-and :terms trimmed-terms))))))
 
 #|
-   Differentiated static objectification, on an atom \omega:
+Differentiated static objectification, on an atom \omega:
 
-   1) If \omega is oidful, then objectify(\omega) = \omega.
+1) If \omega is oidful, then objectify(\omega) = \omega.
 
-   2) If \omega is a non-ground fact, or a rule conclusion atom, or a query atom,
-      then objectify(\omega) = Exists ?j (?j#f(...)).
+2) If \omega is a non-ground fact, or a rule conclusion atom, or a query atom,
+then objectify(\omega) = Exists ?j (?j#f(...)).
 
-   3) If \omega is a rule condition atom, objectify(\omega) = ?j#f(...) where ?j
-      is a fresh variable scoped universally by the enclosing rule.
+3) If \omega is a rule condition atom, objectify(\omega) = ?j#f(...) where ?j
+is a fresh variable scoped universally by the enclosing rule.
 |#
 
 (defun objectify-static-diff (term)
   (let (vars)
-   (labels ((forall-clause (clause)
-              (if (or (null vars) (ruleml-forall-p clause))
-                  clause
-                  (make-ruleml-forall :vars vars :clause clause)))
-            (exists-fn (atom) ;; Rule 2.
-              (let ((oid (fresh-variable)))
-                (make-ruleml-exists :vars (list oid)
-                                    :formula (make-ruleml-oidful-atom :oid oid
-                                                                      :predicate atom))))
-            (oid-fn (atom) ;; Rule 3.
-              (let ((oid (fresh-variable)))
-                (push oid vars)
-                (make-ruleml-oidful-atom :oid oid :predicate atom)))
-            (query-fn (term)
-              (match term
-                ((ruleml-and :terms terms)
-                 (make-ruleml-and :terms (mapcar #'query-fn terms)))
-                ((ruleml-or :terms terms)
-                 (make-ruleml-or :terms (mapcar #'query-fn terms)))
-                ((ruleml-atom)
-                 (exists-fn term))
-                (_ term)))
-            (loop-fn (term subst-fn)
-              (match term
-                ((ruleml-atom)
-                 (if (ground-atom-p term)
-                     term
-                     (funcall subst-fn term)))
-                ((ruleml-implies :conclusion conclusion :condition condition)
-                 (forall-clause (make-ruleml-implies :conclusion (loop-fn conclusion #'exists-fn)
-                                                     :condition  (loop-fn condition #'oid-fn))))
-                ((ruleml-forall :vars clause-vars :clause clause)
-                 (:= vars (copy-list clause-vars))
-                 (forall-clause (loop-fn clause subst-fn)))
-                ((ruleml-query :term query)
-                 (make-ruleml-query :term (query-fn query)))
-                ((ruleml-and :terms terms)
-                 (make-ruleml-and :terms (mapcar (lambda (term) (loop-fn term subst-fn)) terms)))
-                ((ruleml-or :terms terms)
-                 (make-ruleml-or :terms (mapcar (lambda (term) (loop-fn term subst-fn)) terms)))
-                (_ term))))
-     (loop-fn term #'exists-fn))))
+    (labels ((forall-clause (clause)
+               (if (or (null vars) (ruleml-forall-p clause))
+                   clause
+                   (make-ruleml-forall :vars vars :clause clause)))
+             (exists-fn (atom) ;; Rule 2.
+               (let ((oid (fresh-variable)))
+                 (make-ruleml-exists :vars (list oid)
+                                     :formula (make-ruleml-oidful-atom :oid oid
+                                                                       :predicate atom))))
+             (oid-fn (atom) ;; Rule 3.
+               (let ((oid (fresh-variable)))
+                 (push oid vars)
+                 (make-ruleml-oidful-atom :oid oid :predicate atom)))
+             (query-fn (term)
+               (match term
+                 ((ruleml-and :terms terms)
+                  (make-ruleml-and :terms (mapcar #'query-fn terms)))
+                 ((ruleml-or :terms terms)
+                  (make-ruleml-or :terms (mapcar #'query-fn terms)))
+                 ((ruleml-atom)
+                  (exists-fn term))
+                 (_ term)))
+             (loop-fn (term subst-fn)
+               (match term
+                 ((ruleml-atom)
+                  (if (ground-atom-p term)
+                      term
+                      (funcall subst-fn term)))
+                 ((ruleml-implies :conclusion conclusion :condition condition)
+                  (forall-clause (make-ruleml-implies :conclusion (loop-fn conclusion #'exists-fn)
+                                                      :condition  (loop-fn condition #'oid-fn))))
+                 ((ruleml-forall :vars clause-vars :clause clause)
+                  (:= vars (copy-list clause-vars))
+                  (forall-clause (loop-fn clause subst-fn)))
+                 ((ruleml-query :term query)
+                  (make-ruleml-query :term (query-fn query)))
+                 ((ruleml-and :terms terms)
+                  (make-ruleml-and :terms (mapcar (lambda (term) (loop-fn term subst-fn)) terms)))
+                 ((ruleml-or :terms terms)
+                  (make-ruleml-or :terms (mapcar (lambda (term) (loop-fn term subst-fn)) terms)))
+                 (_ term))))
+      (loop-fn term #'exists-fn))))
 
 
 #| Dynamic objectification:
 
-   1) If \omega is a relationship, objectify_d(\phi, \omega) = \omega.
+1) If \omega is a relationship, objectify_d(\phi, \omega) = \omega.
 
-   2) If \omega has a non-variable OID or a slot, objectify_d(\phi, \omega) = Or().
+2) If \omega has a non-variable OID or a slot, objectify_d(\phi, \omega) = Or().
 
-   3) If \omega has an OID variable and m > 0 tuples, being of the form ;
-      ?O#f([t_{1,1}, \ldots, t_{1,n_1}], \ldots, [t_{m,1}, \ldots, t_{m,n_m}]),
-      then tupribution happens, and we end up with m disjunctions of the form:
+3) If \omega has an OID variable and m > 0 tuples, being of the form ;
+?O#f([t_{1,1}, \ldots, t_{1,n_1}], \ldots, [t_{m,1}, \ldots, t_{m,n_m}]),
+then tupribution happens, and we end up with m disjunctions of the form:
 
-      And(\ldots
-          f(t_{1,i} \ldots t_{i,n}) ?O = _oidcons(f t_{i,1} \ldots t_{i,n})
-         )
+And(\ldots
+f(t_{1,i} \ldots t_{i,n}) ?O = _oidcons(f t_{i,1} \ldots t_{i,n})
+)
 
-   4) If \omega is a membership of the form ?O#f, objectify_d(\phi, \omega) is a disjunction
-      of k formulas objectify_d(?O#f(?X_1 \ldots ?X_{n_i})), where $n_1, \ldots, n_k$ are the k
-      different arities of f in the KB:
+4) If \omega is a membership of the form ?O#f, objectify_d(\phi, \omega) is a disjunction
+of k formulas objectify_d(?O#f(?X_1 \ldots ?X_{n_i})), where $n_1, \ldots, n_k$ are the k
+different arities of f in the KB:
 
-      Or(objectify_d(\ldots ?O#f(?X_1 \ldots ?X_{n_i})) \ldots)
+Or(objectify_d(\ldots ?O#f(?X_1 \ldots ?X_{n_i})) \ldots)
 
-   5) If \omega is of the form f(...) has no OID but m tuples, m > 1,
-      objectify_d(\phi, \omega) = Exists ?O objectify_d(?O#f(...))
-      where ?O is a fresh variable in the query.
+5) If \omega is of the form f(...) has no OID but m tuples, m > 1,
+objectify_d(\phi, \omega) = Exists ?O objectify_d(?O#f(...))
+where ?O is a fresh variable in the query.
 |#
 
 (defun make-oid-cons (root terms)
@@ -372,7 +375,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                   (consider-atom (ruleml-implies-conclusion item)))
                  ((ruleml-forall :clause clause)
                   (consider-assert-item clause)))))
-      (walk-ast ruleml-assert #'identity #'consider-assert-item)
+      (transform-ast ruleml-assert #'identity #'consider-assert-item)
       (dolist (root blacklist)
         (remhash root relationships))
       relationships)))
@@ -405,6 +408,32 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 (defun describute (term &key &allow-other-keys)
   (map-atom-transformer #'-describute term))
+
+(defun skolemize (term)
+  (let (forall-vars)
+    (labels ((skolem-term ()
+               (if (null forall-vars)
+                   (make-ruleml-const :contents (fresh-skolem-constant))
+                   (make-ruleml-atom :root (fresh-skolem-constant)
+                                     :descriptors (list (make-ruleml-tuple :dep t :terms forall-vars)))))
+             (skolemize-head (term)
+               (match term
+                 ((ruleml-implies :conclusion conclusion :condition condition)
+                  (make-ruleml-implies :conclusion (skolemize-head conclusion)
+                                       :condition condition))
+                 ((ruleml-exists :vars vars :formula formula)
+                  (transform-ast formula
+                                 (lambda (term)
+                                   (if (member term vars)
+                                       (skolem-term)
+                                       term))))
+                 (_ term))))
+      (match term
+        ((ruleml-forall :vars vars :clause clause)
+         (setf forall-vars (remove-if #'ruleml-genvar-p vars))
+         (make-ruleml-forall :vars vars
+                             :clause (skolemize-head clause)))
+        (_ (skolemize-head term))))))
 
 (defun subclass-rewrite (term)
   (match term
@@ -440,7 +469,8 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                         embedded-objectify
                                         unnest
                                         (objectify relationships)
-                                        describute)
+                                        describute
+                                        skolemize)
                                   items))))
                ((ruleml-query :term query)
                 (let ((relationships (make-hash-table :test #'equal)))
