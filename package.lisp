@@ -5,7 +5,7 @@
 (require :trivia)
 
 (defpackage #:psoa-ast
-  (:use #:cl #:trivia)
+  (:use #:cl #:rutils #:trivia)
   (:export #:transform-ast
            #:ruleml
            #:ruleml-document
@@ -135,7 +135,8 @@
            #:make-ruleml-or
            #:make-ruleml-exists
            #:make-ruleml-external
-           #:make-ruleml-membership))
+           #:make-ruleml-membership)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)

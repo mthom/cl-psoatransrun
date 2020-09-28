@@ -233,8 +233,7 @@
          #\))
   (:destructure (external ws1 lparen ws2 atom ws3 rparen &bounds start)
     (declare (ignore external ws1 lparen ws2 ws3 rparen))
-    (make-ruleml-external :atom atom
-                          :position start)))
+    (make-ruleml-external :atom atom :position start)))
 
 (defrule atomic
     (or subclass equal atom))
