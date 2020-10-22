@@ -7,6 +7,7 @@
   :depends-on (#:esrap #:rutils #:trivia)
   :components ((:file "package")
                (:file "psoa-ast")
-               (:file "psoa-pprint")
                (:file "psoa-grammar")
+               (:file "psoa-pprint")
+               (:file "psoa-prolog-translator")
                (:file "psoa-transformers")))

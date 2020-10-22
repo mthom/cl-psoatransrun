@@ -10,7 +10,7 @@
   (make-ruleml-const :contents (string-downcase (format nil "~A" (gensym prefix)))))
 
 (defun fresh-skolem-constant ()
-  (make-ruleml-const :contents (string-downcase (format nil "_skolem~A" (gensym "")))))
+  (make-ruleml-const :contents (string-downcase (format nil "skolem~A" (gensym "")))))
 
 (defun ground-atom-p (atom)
   (transform-ast atom
@@ -20,22 +20,26 @@
   t)
 
 (defun subclass-rewrite (term)
-  (match term
-    ((ruleml-subclass-rel :super super :sub sub)
-     (let* ((var   (fresh-variable))
-            (head  (make-ruleml-oidful-atom :oid var :predicate super))
-            (body  (make-ruleml-oidful-atom :oid var :predicate sub)))
-       (make-ruleml-forall :vars (list var)
-                           :clause (make-ruleml-implies :conclusion head
-                                                        :condition  body))))
-    ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
-     (let* ((var   (fresh-variable))
-            (head  (make-ruleml-oidful-atom :oid var :predicate super))
-            (body  (make-ruleml-oidful-atom :oid var :predicate sub)))
-       (make-ruleml-forall :vars (cons var vars)
-                           :clause (make-ruleml-implies :conclusion head
-                                                        :condition  body))))
-    (_ term)))
+  (flet ((make-ruleml-oidful (oid predicate)
+           (if (ruleml-const-p predicate)
+               (make-ruleml-membership :oid oid :predicate predicate)
+               (make-ruleml-oidful-atom :oid oid :predicate predicate))))
+      (match term
+        ((ruleml-subclass-rel :super super :sub sub)
+         (let* ((var   (fresh-variable))
+                (head  (make-ruleml-oidful var super))
+                (body  (make-ruleml-oidful var sub)))
+           (make-ruleml-forall :vars (list var)
+                               :clause (make-ruleml-implies :conclusion head
+                                                            :condition  body))))
+        ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
+         (let* ((var   (fresh-variable))
+                (head  (make-ruleml-oidful var super))
+                (body  (make-ruleml-oidful var sub)))
+           (make-ruleml-forall :vars (cons var vars)
+                               :clause (make-ruleml-implies :conclusion head
+                                                            :condition  body))))
+        (_ term))))
 
 
 (defun map-atom-transformer (transformer term &rest args &key &allow-other-keys)
@@ -119,8 +123,11 @@
                term)
              (trim (term)
                (match term
-                 ((or (ruleml-oidful-atom :oid oid :predicate atom :position pos)
-                      (ruleml-membership :oid oid :predicate atom :position pos))
+                 ((ruleml-membership :oid oid :predicate atom :position pos)
+                  (make-ruleml-membership :oid (check-oid (retain oid))
+                                          :predicate (retain atom)
+                                          :position pos))
+                 ((ruleml-oidful-atom :oid oid :predicate atom :position pos)
                   (make-ruleml-oidful-atom :oid (check-oid (retain oid))
                                            :predicate (retain atom)
                                            :position pos))
@@ -460,17 +467,20 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 (defun split-conjuctive-conclusion (atomic-formula)
   (match atomic-formula
-    ((ruleml-implies :conclusion (ruleml-and :terms terms) :condition condition)
-     (make-ruleml-and :terms (mapcar #`(make-ruleml-implies :conclusion % :condition condition)
-                                     terms)))
+    ((ruleml-implies :conclusion (ruleml-and :terms terms)
+                     :condition condition)
+     (mapcar #`(make-ruleml-implies :conclusion %
+                                    :condition condition)
+             terms))
     ((ruleml-forall :vars vars
-                    :clause (ruleml-implies :conclusion (ruleml-and :terms terms) :condition condition))
-     (make-ruleml-and :terms (mapcar #`(make-ruleml-forall :vars vars
-                                                           :clause
-                                                           (make-ruleml-implies :conclusion %
-                                                                                :condition condition))
-                                     terms)))
-    (_ atomic-formula)))
+                    :clause (ruleml-implies :conclusion (ruleml-and :terms terms)
+                                            :condition condition))
+     (mapcar #`(make-ruleml-forall
+                :vars vars
+                :clause (make-ruleml-implies :conclusion %
+                                             :condition condition))
+             terms))
+    (_ (list atomic-formula))))
 
 
 (defun transform (document)
@@ -484,7 +494,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                ((ruleml-assert :items items)
                 (let ((relationships (kb-relationships term)))
                   (make-ruleml-assert
-                   :items (mapcar #`(-> %
+                   :items (mapcan #`(-> %
                                         subclass-rewrite
                                         embedded-objectify
                                         unnest

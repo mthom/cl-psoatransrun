@@ -470,8 +470,8 @@
 (defrule const-short
     (or angle-bracket-iri
         curie
-        pn-local ;; (and #\_ (? pn-local))
         numeric-literal
+        pn-local ;; (and #\_ (? pn-local))
         unicode-string)
   (:lambda (const &bounds start)
     (make-ruleml-const :contents const :position start)))

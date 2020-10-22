@@ -151,5 +151,11 @@
   (:export #:unnest #:objectify)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
+(defpackage #:psoa-prolog-translator
+  (:use #:cl #:psoa-ast #:rutils #:trivia)
+  (:export #:translate)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
+
 (defpackage #:PSOATransRun
   (:use #:cl))
+

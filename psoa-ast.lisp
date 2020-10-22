@@ -182,8 +182,11 @@
               :negative negative
               :external external))
     ((ruleml-implies :conclusion conclusion :condition condition)
-     (funcall key (make-ruleml-implies :conclusion (funcall propagator conclusion :positive t :negative nil)
-                                       :condition (funcall propagator condition :positive nil :negative t))
+     (funcall key (make-ruleml-implies
+                   :conclusion (funcall propagator conclusion
+                                        :positive t :negative nil)
+                   :condition (funcall propagator condition
+                                       :positive nil :negative t))
               :positive positive
               :negative negative))
     ((ruleml-exists :vars vars :formula formula)
