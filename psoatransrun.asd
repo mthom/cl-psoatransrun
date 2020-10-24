@@ -10,4 +10,5 @@
                (:file "psoa-grammar")
                (:file "psoa-pprint")
                (:file "psoa-prolog-translator")
-               (:file "psoa-transformers")))
+               (:file "psoa-transformers")
+               (:file "psoatransrun")))

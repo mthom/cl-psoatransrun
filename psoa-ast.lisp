@@ -33,7 +33,8 @@
   profile)
 
 (defstruct (ruleml-assert (:include ruleml-ast-node))
-  items)
+  items
+  relationships)
 
 (defstruct (ruleml-query (:include ruleml-ast-node))
   term)

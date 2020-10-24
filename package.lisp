@@ -148,14 +148,16 @@
 
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
-  (:export #:unnest #:objectify)
+  (:export #:transform-document #:transform-query #:predicate-name)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-prolog-translator
-  (:use #:cl #:psoa-ast #:rutils #:trivia)
-  (:export #:translate)
+  (:use #:cl #:psoa-ast  #:psoa-transformers #:rutils #:trivia)
+  (:export #:translate-document #:translate-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
-(defpackage #:PSOATransRun
-  (:use #:cl))
+(defpackage #:psoatransrun
+  (:use #:cl #:psoa-grammar #:psoa-transformers #:psoa-prolog-translator #:rutils #:trivia)
+  (:export #:repl)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 

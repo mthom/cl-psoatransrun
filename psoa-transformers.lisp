@@ -226,7 +226,8 @@ where ?O is a fresh variable in the query.
 |#
 
 (defun make-oid-cons (root terms)
-  (make-ruleml-atom :root "_oid_cons" :descriptors (cons root terms)))
+  (make-ruleml-atom :root (make-ruleml-const :contents "_oid_cons")
+                    :descriptors (list (make-ruleml-tuple :dep t :terms (cons root terms)))))
 
 (defun is-relationship-p (atom)
   (let ((descriptors (ruleml-atom-descriptors atom)))
@@ -266,7 +267,7 @@ where ?O is a fresh variable in the query.
                 (make-ruleml-and :terms
                                  (loop for tuple in descriptors
                                        for terms = (ruleml-tuple-terms tuple)
-                                       for atom  = (make-ruleml-atom :root root :descriptors terms)
+                                       for atom  = (make-ruleml-atom :root root :descriptors (list tuple))
                                        for oid-cons-equal = (make-ruleml-equal
                                                              :left  oid
                                                              :right (make-oid-cons root terms))
@@ -279,7 +280,9 @@ where ?O is a fresh variable in the query.
                    (make-ruleml-or
                     :terms
                     (mapcar (lambda (k)
-                              (let ((tuple (loop repeat k collect (fresh-variable))))
+                              (let ((tuple (make-ruleml-tuple
+                                            :dep t
+                                            :terms (loop repeat k collect (fresh-variable)))))
                                 (objectify-dynamic
                                  (make-ruleml-oidful-atom
                                   :oid oid
@@ -483,7 +486,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
     (_ (list atomic-formula))))
 
 
-(defun transform (document)
+(defun transform-document (document)
   (make-ruleml-document
    :base (ruleml-document-base document)
    :prefixes (ruleml-document-prefixes document)
@@ -503,13 +506,18 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                         skolemize
                                         flatten-externals
                                         split-conjuctive-conclusion)
-                                  items))))
-               ((ruleml-query :term query)
+                                  items)
+                   :relationships relationships)))
+               ((ruleml-query)
                 (let ((relationships (make-hash-table :test #'equal)))
-                  (make-ruleml-query :term (-> query
-                                               embedded-objectify
-                                               unnest
-                                               (objectify relationships)
-                                               describute))))
+                  (transform-query term relationships)))
                (_ term)))
            (ruleml-document-performatives document))))
+
+
+(defun transform-query (query relationships)
+  (-> query
+      embedded-objectify
+      unnest
+      (objectify relationships)
+      describute))
