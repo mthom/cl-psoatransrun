@@ -157,7 +157,8 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun
-  (:use #:cl #:psoa-grammar #:psoa-transformers #:psoa-prolog-translator #:rutils #:trivia)
+  (:use #:cl #:external-program #:psoa-grammar #:psoa-transformers
+        #:psoa-prolog-translator #:rutils #:trivia #:usocket)
   (:export #:repl)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 

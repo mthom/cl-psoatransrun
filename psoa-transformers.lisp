@@ -287,7 +287,7 @@ where ?O is a fresh variable in the query.
                                  (make-ruleml-oidful-atom
                                   :oid oid
                                   :predicate (make-ruleml-atom :root predicate
-                                                               :descriptors tuple))
+                                                               :descriptors (list tuple)))
                                  relationships)))
                             tuple-arities))
                    term))

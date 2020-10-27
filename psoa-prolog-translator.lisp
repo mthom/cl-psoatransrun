@@ -10,8 +10,7 @@
                 (make-hash-table :test #'equalp)
                 output-stream
                 nil)
-    (format nil "?- ~A."
-            (get-output-stream-string output-stream))))
+    (format nil "~A.~%" (get-output-stream-string output-stream))))
 
 (defun translate-document (document &key (system :scryer))
   (multiple-value-bind (prolog-kb-string relationships predicate-indicators)

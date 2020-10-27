@@ -4,7 +4,7 @@
   :license  "Specify license here"
   :version "0.0.1"
   :serial t
-  :depends-on (#:esrap #:rutils #:trivia)
+  :depends-on (#:esrap #:external-program #:rutils #:trivia #:usocket)
   :components ((:file "package")
                (:file "psoa-ast")
                (:file "psoa-grammar")
