@@ -26,7 +26,7 @@ eval_loop(Stream) :-
     (  Term == end_of_file ->
        true
     ;
-       call(Term),
+       catch(call(Term), _, false),
        compile_solution_string(VNNames, VarString),
        write_term(Stream, VarString, []),
        write_term(Stream, '\n', []),
@@ -91,7 +91,7 @@ write_psoa_term(Term) -->
 write_var_eqs([], []) --> [].
 write_var_eqs([VNName | VNNames], [Term | Terms]) -->
     { phrase(write_psoa_term(Term), TermString) },
-    format_("~s = ~s ", [VNName, TermString]),
+    format_("~s=~s ", [VNName, TermString]),
     !,
     write_var_eqs(VNNames, Terms).
 

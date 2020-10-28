@@ -3,18 +3,18 @@
 
 (named-readtables:in-readtable rutils-readtable)
 
-(defun translate-query (query)
+(defun translate-query (query prefix-ht)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
          (output-stream (make-string-output-stream)))
-    (translate- (ruleml-query-term query)
-                (make-hash-table :test #'equalp)
+    (-translate (ruleml-query-term query)
+                prefix-ht
                 output-stream
                 nil)
     (format nil "~A.~%" (get-output-stream-string output-stream))))
 
 (defun translate-document (document &key (system :scryer))
-  (multiple-value-bind (prolog-kb-string relationships predicate-indicators)
-      (translate-document- document)
+  (with ((prolog-kb-string relationships predicate-indicators prefix-ht
+                           (translate-document- document)))
     (ecase system
       (:scryer (let* ((stream (make-string-input-stream prolog-kb-string))
                       (collated-stream (make-string-output-stream))
@@ -29,7 +29,8 @@
                  (dolist (line lines)
                    (format collated-stream "~A~%" line))
                  (values (get-output-stream-string collated-stream)
-                         relationships))))))
+                         relationships
+                         prefix-ht))))))
 
 (defun translate-document- (document)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
@@ -48,19 +49,20 @@
          (unless (null relationships)
            (error "multiple Assert's in a single PSOA KB isn't yet supported"))
          (setf relationships assert-relationships)
-         (mapc #`(let ((item-predicate-indicators (translate- % prefix-ht prolog-kb-stream)))
+         (mapc #`(let ((item-predicate-indicators (-translate % prefix-ht prolog-kb-stream)))
                    (setf predicate-indicators
                          (merge-hts predicate-indicators item-predicate-indicators))
                    (format prolog-kb-stream ".~%"))
                items))
         ((ruleml-query :term query-term)
          (format prolog-kb-stream "?- ~A."
-                 (translate- query-term prefix-ht prolog-kb-stream)))))
+                 (-translate query-term prefix-ht prolog-kb-stream)))))
     (values (get-output-stream-string prolog-kb-stream)
             relationships
-            predicate-indicators)))
+            predicate-indicators
+            prefix-ht)))
 
-(defun translate- (item prefix-ht stream &optional (assert-item-p t))
+(defun -translate (item prefix-ht stream &optional (assert-item-p t))
   (let ((predicate-indicators (make-hash-table :test #'equalp)))
     (macrolet ((record-predicate-indicator (name arity recordp)
                  `(when ,recordp
@@ -177,13 +179,13 @@
                                    ("http://www.w3.org/2007/rif-builtin-function#"
                                     (if-it (match-builtin-function local)
                                            (format stream "~A" it)
-                                           (format stream "~A:~A" ns local)))
+                                           (format stream "'<~A~A>'" url local)))
                                    ("http://www.w3.org/2007/rif-builtin-predicate#"
                                     (if-it (match-builtin-predicate local)
                                            (format stream "~A" it)
-                                           (format stream "~A:~A" ns local)))
-                                   (_ (error "~A is not a known prefix" ns)))
-                                 (format stream "~A:~A" ns local)))
+                                           (format stream "'<~A~A>'" url local)))
+                                   (_ (format stream "'<~A~A>'" url local)))
+                                 (format stream "'<~A~A>'" ns local)))
                            (format stream "~A" local)))
                       ((type string)
                        (if (eql (char const 0) #\_)

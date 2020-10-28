@@ -98,6 +98,7 @@
   (write (ruleml-var-name var) :stream stream :escape nil))
 
 (set-pprint-dispatch 'ruleml-var 'pprint-ruleml-var)
+(set-pprint-dispatch 'ruleml-genvar 'pprint-ruleml-var)
 
 (defun pprint-ruleml-slot (stream slot)
   (write (ruleml-slot-name slot) :stream stream)

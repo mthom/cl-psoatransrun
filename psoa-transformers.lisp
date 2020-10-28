@@ -112,7 +112,7 @@
                (match oid
                  ((ruleml-var :name name)
                   (if (null name)
-                      (make-ruleml-var :name (fresh-variable))
+                      (fresh-variable)
                       oid))
                  ("_" (fresh-constant))
                  (_ oid)))
@@ -255,7 +255,9 @@ where ?O is a fresh variable in the query.
                      :vars (list oid)
                      :formula (objectify-dynamic
                                (make-ruleml-oidful-atom :oid oid :predicate term)
-                               relationships))))))
+                               relationships
+                               :positive positive
+                               :negative negative))))))
         ((ruleml-oidful-atom :oid oid :predicate (ruleml-atom :root root :descriptors descriptors))
          (cond ((or (not (ruleml-var-p oid)) ;; 2.2
                     (some (lambda (term)
@@ -288,7 +290,9 @@ where ?O is a fresh variable in the query.
                                   :oid oid
                                   :predicate (make-ruleml-atom :root predicate
                                                                :descriptors (list tuple)))
-                                 relationships)))
+                                 relationships
+                                 :positive positive
+                                 :negative negative)))
                             tuple-arities))
                    term))
              (make-ruleml-or)))
@@ -308,8 +312,8 @@ is objectify_d(\phi, \omega) if \omega is relational.
         (blacklist))
     (labels ((consider-atom (atom)
                (if (is-relationship-p atom)
-                   (push (length (ruleml-tuple-terms (first (ruleml-atom-descriptors atom))))
-                         (gethash (predicate-name atom) relationships))
+                   (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors atom))))
+                            (gethash (predicate-name atom) relationships))
                    (push (ruleml-atom-root atom) blacklist)))
              (consider-assert-item (item &key &allow-other-keys)
                (match item
@@ -401,7 +405,11 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 (defun skolemize (term)
   (let (forall-vars)
-    (labels ((skolem-term ()
+    (labels ((vars-are-equal-p (item var)
+               (match item
+                 ((ruleml-var :name item-var-name)
+                  (equal item-var-name (ruleml-var-name var)))))
+             (skolem-term ()
                (if (null forall-vars)
                    (make-ruleml-const :contents (fresh-skolem-constant))
                    (make-ruleml-atom :root (fresh-skolem-constant)
@@ -415,7 +423,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                  ((ruleml-exists :vars vars :formula formula)
                   (transform-ast formula
                                  (lambda (term &key &allow-other-keys)
-                                   (if (member term vars)
+                                   (if (member term vars :test #'vars-are-equal-p)
                                        (skolem-term)
                                        term))))
                  (_ term))))
@@ -468,13 +476,25 @@ is objectify_d(\phi, \omega) if \omega is relational.
             vars)))
 
 
+(defun flatten-and (item)
+  (match item
+    ((ruleml-and :terms terms) (mapcan #'flatten-and terms))
+    ((type list) (mapcan #'flatten-and item))
+    (_ (list item))))
+
 (defun split-conjuctive-conclusion (atomic-formula)
   (match atomic-formula
     ((ruleml-implies :conclusion (ruleml-and :terms terms)
                      :condition condition)
      (mapcar #`(make-ruleml-implies :conclusion %
                                     :condition condition)
-             terms))
+             (flatten-and terms)))
+    ((ruleml-forall :vars vars
+                    :clause (ruleml-and :terms terms))
+     (mapcar #`(make-ruleml-forall
+                :vars vars
+                :clause %)
+             (flatten-and terms)))
     ((ruleml-forall :vars vars
                     :clause (ruleml-implies :conclusion (ruleml-and :terms terms)
                                             :condition condition))
@@ -482,8 +502,8 @@ is objectify_d(\phi, \omega) if \omega is relational.
                 :vars vars
                 :clause (make-ruleml-implies :conclusion %
                                              :condition condition))
-             terms))
-    (_ (list atomic-formula))))
+             (flatten-and terms)))
+    (_ (flatten-and atomic-formula))))
 
 
 (defun transform-document (document)
@@ -502,8 +522,8 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                         embedded-objectify
                                         unnest
                                         (objectify relationships)
-                                        describute
                                         skolemize
+                                        describute
                                         flatten-externals
                                         split-conjuctive-conclusion)
                                   items)
