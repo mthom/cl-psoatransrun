@@ -55,7 +55,7 @@
 (set-pprint-dispatch 'ruleml-string 'pprint-ruleml-string)
 
 (defun pprint-ruleml-import (stream import)
-  (pprint-logical-block (stream nil :prefix "Import (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Import(" :suffix ")")
     (write-char #\< stream)
     (write (ruleml-import-iri-ref import) :stream stream)
     (write-char #\> stream)
@@ -67,7 +67,7 @@
 (set-pprint-dispatch 'ruleml-import 'pprint-ruleml-import)
 
 (defun pprint-ruleml-assert (stream assert)
-  (pprint-logical-block (stream nil :prefix "Assert (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Assert(" :suffix ")")
     (pprint-indent :block -4 stream)
     (pprint-newline :mandatory stream)
     (pprint-logical-block (stream (ruleml-assert-items assert))
@@ -76,19 +76,19 @@
             (pprint-exit-if-list-exhausted)
             (pprint-newline :mandatory stream)
             (pprint-newline :mandatory stream)))
-    (pprint-indent :block (- (length "Assert (")) stream)
+    (pprint-indent :block (- (length "Assert(")) stream)
     (pprint-newline :mandatory stream)))
 
 (set-pprint-dispatch 'ruleml-assert 'pprint-ruleml-assert)
 
 (defun pprint-ruleml-query (stream query)
-  (pprint-logical-block (stream nil :prefix "Query (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Query(" :suffix ")")
     (write (ruleml-query-term query) :stream stream)))
 
 (set-pprint-dispatch 'ruleml-query 'pprint-ruleml-query)
 
 (defun pprint-ruleml-naf (stream formula)
-  (pprint-logical-block (stream nil :prefix "Naf (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Naf(" :suffix ")")
     (write (ruleml-naf-formula formula) :stream stream)))
 
 (set-pprint-dispatch 'ruleml-naf 'pprint-ruleml-naf)
@@ -192,7 +192,7 @@
 (set-pprint-dispatch 'ruleml-implies 'pprint-ruleml-implies)
 
 (defun pprint-ruleml-and (stream item)
-  (pprint-logical-block (stream nil :prefix "And (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "And(" :suffix ")")
     (pprint-indent :block -3 stream)
     (pprint-newline :mandatory stream)
     (pprint-linear stream (ruleml-and-terms item) nil)
@@ -202,7 +202,7 @@
 (set-pprint-dispatch 'ruleml-and 'pprint-ruleml-and)
 
 (defun pprint-ruleml-or (stream item)
-  (pprint-logical-block (stream nil :prefix "Or (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Or(" :suffix ")")
     (pprint-indent :block -2 stream)
     (pprint-newline :mandatory stream)
     (pprint-linear stream (ruleml-or-terms item) nil)
@@ -224,7 +224,7 @@
 (set-pprint-dispatch 'ruleml-exists 'pprint-ruleml-exists)
 
 (defun pprint-ruleml-external (stream external)
-  (pprint-logical-block (stream nil :prefix "External (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "External(" :suffix ")")
     (pprint-indent :block 4 stream)
     (write (ruleml-external-atom external) :stream stream)))
 
