@@ -74,7 +74,7 @@ phrase_maplist([Arg | Args], DCG, Delimiter) -->
 
 write_psoa_term(Term) -->
     (  { partial_string(Term) } ->
-       format_("~s", [Term])
+       format_("\"~s\"", [Term])
     ;
        { functor(Term, F, _) },
        format_("~w", [F]),

@@ -1,8 +1,8 @@
 (asdf:defsystem #:psoatransrun
-  :description "Describe PSOATransRun here"
+  :description "A CL implementation of PSOATransRun, an implementation of the PSOA RuleML data and rule language."
   :author "Mark Thom"
-  :license  "Specify license here"
-  :version "0.0.1"
+  :license "BSD-3"
+  :version "0.9.0"
   :serial t
   :depends-on (#:esrap #:external-program #:rutils #:trivia #:usocket)
   :components ((:file "package")

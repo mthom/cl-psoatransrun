@@ -170,6 +170,7 @@
                            (make-url-const ns local prefix-ht stream)
                            (format stream "~A" local)))
                       ((type string)
+                       (format stream "\"~A\"" const)
                        (if (eql (char const 0) #\_)
                            (format stream "'~A'" const)
                            (format stream "'_~A'" const)))

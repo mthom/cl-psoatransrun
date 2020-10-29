@@ -450,7 +450,18 @@
     (make-ruleml-external :atom expr :position start)))
 
 (defrule const
-    (or const-string const-short))
+    (or const-short const-string))
+
+(defrule const-short
+    (or angle-bracket-iri
+        curie
+        numeric-literal
+        pn-local ;; (and #\_ (? pn-local))
+        unicode-string)
+  (:lambda (const &bounds start)
+    (typecase const
+      (ruleml-string const)
+      (t (make-ruleml-const :contents const :position start)))))
 
 (defrule const-string
     (and #\" unicode-string "^^" sym-space)
@@ -467,22 +478,14 @@
 (defrule sym-space
     (or angle-bracket-iri curie))
 
-(defrule const-short
-    (or angle-bracket-iri
-        curie
-        numeric-literal
-        pn-local ;; (and #\_ (? pn-local))
-        unicode-string)
-  (:lambda (const &bounds start)
-    (make-ruleml-const :contents const :position start)))
-
 ;; Lexical analysis.
 
 (defrule unicode-string
     (and #\" (* (not (or #\" #\\ eol echar))) #\")
-  (:destructure (dbl-quote0 chars dbl-quote1)
+  (:destructure (dbl-quote0 chars dbl-quote1 &bounds start)
     (declare (ignore dbl-quote0 dbl-quote1))
-    (concatenate 'string chars)))
+    (make-ruleml-string :contents (concatenate 'string chars)
+                        :position start)))
 
 (defrule iri-ref
     (and #\< (* iri-ref-char) #\>)

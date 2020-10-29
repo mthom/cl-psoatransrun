@@ -1,7 +1,7 @@
 
 (in-package #:psoatransrun)
 
-(defparameter *prolog-engine-path* #p"/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog")
+(defparameter *prolog-engine-path* nil)
 
 (defun psoa-document->prolog (document)
   (with ((document prefix-ht (transform-document (parse 'psoa-grammar::ruleml document))))
@@ -43,8 +43,16 @@
           (read-and-print-solutions engine-socket)))
 
 (defun psoa-load-and-repl (document)
+  (if (and *prolog-engine-path* (probe-file *prolog-engine-path*))
+      (-psoa-load-and-repl document)
+      (progn (format t "Enter the path of Scryer Prolog: ")
+             (finish-output)
+             (let ((*prolog-engine-path* (probe-file (pathname (read-line)))))
+               (psoa-load-and-repl document)))))
+
+(defun -psoa-load-and-repl (document)
   (with ((prolog-kb-string relationships prefix-ht (psoa-document->prolog document))
-         (process (start *prolog-engine-path* nil
+         (process (external-program:start *prolog-engine-path* nil
                          :input :stream
                          :output :stream)))
     (format t "The translated KB:~%~%~A" prolog-kb-string)
@@ -57,7 +65,9 @@
 
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
-    (write-line "use_module('/home/mark/Projects/CL/PSOATransRun/scryer_server.pl')." (process-input-stream process))
+    (write-string "use_module('" (process-input-stream process))
+    (write-string (sb-posix:getcwd) (process-input-stream process))
+    (write-line "/scryer_server.pl')." (process-input-stream process))
     (finish-output (process-input-stream process))
 
     ;; It's possible for the runtime to print warning messages (ie.,
