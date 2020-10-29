@@ -148,7 +148,7 @@
 
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
-  (:export #:transform-document #:transform-query #:predicate-name)
+  (:export #:make-url-const #:transform-document #:transform-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-prolog-translator

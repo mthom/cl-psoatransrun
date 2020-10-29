@@ -4,13 +4,12 @@
 (defparameter *prolog-engine-path* #p"/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog")
 
 (defun psoa-document->prolog (document)
-  (-> (parse 'psoa-grammar::ruleml document)
-      transform-document
-      translate-document))
+  (with ((document prefix-ht (transform-document (parse 'psoa-grammar::ruleml document))))
+    (translate-document document prefix-ht)))
 
 (defun psoa-query->prolog (query prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
   (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query))
-      (transform-query relationships)
+      (transform-query relationships prefix-ht)
       (translate-query prefix-ht)))
 
 (defun read-and-print-solutions (engine-socket)
@@ -58,7 +57,7 @@
 
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
-    (write-line "use_module('scryer_server.pl')." (process-input-stream process))
+    (write-line "use_module('/home/mark/Projects/CL/PSOATransRun/scryer_server.pl')." (process-input-stream process))
     (finish-output (process-input-stream process))
 
     ;; It's possible for the runtime to print warning messages (ie.,

@@ -12,9 +12,9 @@
                 nil)
     (format nil "~A.~%" (get-output-stream-string output-stream))))
 
-(defun translate-document (document &key (system :scryer))
-  (with ((prolog-kb-string relationships predicate-indicators prefix-ht
-                           (translate-document- document)))
+(defun translate-document (document prefix-ht &key (system :scryer))
+  (multiple-value-bind (prolog-kb-string relationships predicate-indicators)
+      (translate-document- document prefix-ht)
     (ecase system
       (:scryer (let* ((stream (make-string-input-stream prolog-kb-string))
                       (collated-stream (make-string-output-stream))
@@ -28,19 +28,14 @@
                  (format collated-stream "~%")
                  (dolist (line lines)
                    (format collated-stream "~A~%" line))
-                 (values (get-output-stream-string collated-stream)
-                         relationships
-                         prefix-ht))))))
+                   (values (get-output-stream-string collated-stream)
+                           relationships
+                           prefix-ht))))))
 
-(defun translate-document- (document)
+(defun translate-document- (document prefix-ht)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
          (prolog-kb-stream (make-string-output-stream))
          (performatives (ruleml-document-performatives document))
-         (prefixes (ruleml-document-prefixes document))
-         (prefix-ht (alist->ht (loop for prefix in prefixes
-                                     collect (cons (ruleml-prefix-name prefix)
-                                                   (ruleml-prefix-iri-ref prefix)))
-                               :test 'equalp))
          (predicate-indicators (make-hash-table :test #'equalp))
          (relationships))
     (dolist (performative performatives)
@@ -172,20 +167,7 @@
                     (match const
                       ((ruleml-pname-ln :name ns :url local)
                        (if ns
-                           (multiple-value-bind (url foundp)
-                               (gethash ns prefix-ht)
-                             (if foundp
-                                 (match url
-                                   ("http://www.w3.org/2007/rif-builtin-function#"
-                                    (if-it (match-builtin-function local)
-                                           (format stream "~A" it)
-                                           (format stream "'<~A~A>'" url local)))
-                                   ("http://www.w3.org/2007/rif-builtin-predicate#"
-                                    (if-it (match-builtin-predicate local)
-                                           (format stream "~A" it)
-                                           (format stream "'<~A~A>'" url local)))
-                                   (_ (format stream "'<~A~A>'" url local)))
-                                 (format stream "'<~A~A>'" ns local)))
+                           (make-url-const ns local prefix-ht stream)
                            (format stream "~A" local)))
                       ((type string)
                        (if (eql (char const 0) #\_)
@@ -197,22 +179,3 @@
                     (format stream "\"~A\"" const)))))
         (translate item stream assert-item-p)
         predicate-indicators))))
-
-(defun match-builtin-function (local)
-  (match local
-    ("numeric-add" "'+'")
-    ("numeric-subtract" "'-'")
-    ("numeric-multiply" "'*'")
-    ("numeric-divide" "'/'")
-    ("numeric-integer-divide" "'//'")
-    ("numeric-mod" "rem")))
-
-(defun match-builtin-predicate (local)
-  (match local
-    ("numeric-equal" "'=:='")
-    ("numeric-less-than" "'<'")
-    ("numeric-less-than-or-equal" "'=<'")
-    ("numeric-greater-than" "'>'")
-    ("numeric-greater-than-or-equal" "'>='")
-    ("numeric-not-equal" "'=\='")
-    ("is-literal-integer" "integer")))

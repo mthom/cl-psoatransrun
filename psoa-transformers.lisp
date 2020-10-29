@@ -235,7 +235,7 @@ where ?O is a fresh variable in the query.
          (ruleml-tuple-p (first descriptors))
          (ruleml-tuple-dep (first descriptors)))))
 
-(defun objectify-dynamic (term relationships &key positive negative &allow-other-keys)
+(defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
   (if (and positive negative)
       ;; 2
       (match term
@@ -256,6 +256,7 @@ where ?O is a fresh variable in the query.
                      :formula (objectify-dynamic
                                (make-ruleml-oidful-atom :oid oid :predicate term)
                                relationships
+                               prefix-ht
                                :positive positive
                                :negative negative))))))
         ((ruleml-oidful-atom :oid oid :predicate (ruleml-atom :root root :descriptors descriptors))
@@ -277,7 +278,7 @@ where ?O is a fresh variable in the query.
         ((ruleml-membership :oid oid :predicate predicate)
          (if (ruleml-var-p oid)
              (multiple-value-bind (tuple-arities foundp) ;; 2.4
-                 (gethash (predicate-name predicate) relationships)
+                 (gethash (predicate-name predicate prefix-ht) relationships)
                (if foundp
                    (make-ruleml-or
                     :terms
@@ -291,6 +292,7 @@ where ?O is a fresh variable in the query.
                                   :predicate (make-ruleml-atom :root predicate
                                                                :descriptors (list tuple)))
                                  relationships
+                                 prefix-ht
                                  :positive positive
                                  :negative negative)))
                             tuple-arities))
@@ -307,13 +309,13 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 |#
 
-(defun kb-relationships (ruleml-assert)
+(defun kb-relationships (ruleml-assert prefix-ht)
   (let ((relationships (make-hash-table :test #'equal))
         (blacklist))
     (labels ((consider-atom (atom)
                (if (is-relationship-p atom)
                    (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors atom))))
-                            (gethash (predicate-name atom) relationships))
+                            (gethash (predicate-name atom prefix-ht) relationships))
                    (push (ruleml-atom-root atom) blacklist)))
              (consider-assert-item (item &key &allow-other-keys)
                (match item
@@ -330,35 +332,74 @@ is objectify_d(\phi, \omega) if \omega is relational.
         (remhash root relationships))
       relationships)))
 
-(defun predicate-name (atom)
+
+(defun match-builtin-function (local)
+  (match local
+    ("numeric-add" "'+'")
+    ("numeric-subtract" "'-'")
+    ("numeric-multiply" "'*'")
+    ("numeric-divide" "'/'")
+    ("numeric-integer-divide" "'//'")
+    ("numeric-mod" "rem")))
+
+(defun match-builtin-predicate (local)
+  (match local
+    ("numeric-equal" "'=:='")
+    ("numeric-less-than" "'<'")
+    ("numeric-less-than-or-equal" "'=<'")
+    ("numeric-greater-than" "'>'")
+    ("numeric-greater-than-or-equal" "'>='")
+    ("numeric-not-equal" "'=\='")
+    ("is-literal-integer" "integer")))
+
+(defun make-url-const (ns local prefix-ht &optional stream)
+  (multiple-value-bind (url foundp)
+      (gethash ns prefix-ht)
+    (if foundp
+        (match url
+          ("http://www.w3.org/2007/rif-builtin-function#"
+           (if-it (match-builtin-function local)
+                  (format stream "~A" it)
+                  (format stream "'<~A~A>'" url local)))
+          ("http://www.w3.org/2007/rif-builtin-predicate#"
+           (if-it (match-builtin-predicate local)
+                  (format stream "~A" it)
+                  (format stream "'<~A~A>'" url local)))
+          (_ (format stream "'<~A~A>'" url local)))
+        (format stream "'<~A~A>'" ns local))))
+
+(defun predicate-name (atom prefix-ht)
   (match atom
     ((ruleml-membership :predicate predicate)
-     (predicate-name predicate))
+     (predicate-name predicate prefix-ht))
     ((ruleml-atom :root root)
-     (predicate-name root))
+     (predicate-name root prefix-ht))
     ((ruleml-oidful-atom :predicate atom)
-     (predicate-name atom))
+     (predicate-name atom prefix-ht))
     ((ruleml-implies :conclusion head)
-     (predicate-name head))
+     (predicate-name head prefix-ht))
     ((ruleml-forall :clause clause)
-     (predicate-name clause))
+     (predicate-name clause prefix-ht))
     ((ruleml-exists :formula formula)
-     (predicate-name formula))
+     (predicate-name formula prefix-ht))
+    ((ruleml-const :contents (ruleml-pname-ln :name ns :url local))
+     (make-url-const ns local prefix-ht))
     ((ruleml-const :contents const)
      const)))
 
-(defun objectify (term relationships)
+(defun objectify (term relationships prefix-ht)
   (let* (vars
          (term (map-atom-transformer
                 (lambda (term &rest args &key external &allow-other-keys)
                   (if (and (ruleml-atom-p term) external)
                       term
-                      (if-it (predicate-name term)
+                      (if-it (predicate-name term prefix-ht)
                              (multiple-value-bind (tuple-arities foundp)
                                  (gethash it relationships)
                                (declare (ignore tuple-arities))
                                (if foundp
-                                   (apply #'objectify-dynamic term relationships args)
+                                   (apply #'objectify-dynamic term relationships
+                                          prefix-ht args)
                                    (multiple-value-bind (term new-vars)
                                        (apply #'objectify-static-diff term args)
                                      (appendf vars new-vars)
@@ -506,38 +547,47 @@ is objectify_d(\phi, \omega) if \omega is relational.
     (_ (flatten-and atomic-formula))))
 
 
+(defun make-prefix-ht (prefixes)
+  (alist->ht (loop for prefix in prefixes
+                   collect (cons (ruleml-prefix-name prefix)
+                                 (ruleml-prefix-iri-ref prefix)))
+             :test #'equalp))
+
 (defun transform-document (document)
-  (make-ruleml-document
-   :base (ruleml-document-base document)
-   :prefixes (ruleml-document-prefixes document)
-   :imports (ruleml-document-imports document)
-   :performatives
-   (mapcar (lambda (term)
-             (match term
-               ((ruleml-assert :items items)
-                (let ((relationships (kb-relationships term)))
-                  (make-ruleml-assert
-                   :items (mapcan #`(-> %
-                                        subclass-rewrite
-                                        embedded-objectify
-                                        unnest
-                                        (objectify relationships)
-                                        skolemize
-                                        describute
-                                        flatten-externals
-                                        split-conjuctive-conclusion)
-                                  items)
-                   :relationships relationships)))
-               ((ruleml-query)
-                (let ((relationships (make-hash-table :test #'equal)))
-                  (transform-query term relationships)))
-               (_ term)))
-           (ruleml-document-performatives document))))
+  (with ((prefix-ht (make-prefix-ht (ruleml-document-prefixes document))))
+    (values
+     (make-ruleml-document
+      :base (ruleml-document-base document)
+      :prefixes (ruleml-document-prefixes document)
+      :imports (ruleml-document-imports document)
+      :performatives
+      (mapcar (lambda (term)
+                (match term
+                  ((ruleml-assert :items items)
+                   (let ((relationships (kb-relationships term prefix-ht)))
+                     (make-ruleml-assert
+                      :items (mapcan #`(-> %
+                                           subclass-rewrite
+                                           embedded-objectify
+                                           unnest
+                                           (objectify relationships prefix-ht)
+                                           skolemize
+                                           describute
+                                           flatten-externals
+                                           split-conjuctive-conclusion)
+                                     items)
+                      :relationships relationships)))
+                  ((ruleml-query)
+                   (let ((relationships (make-hash-table :test #'equal)))
+                     (transform-query term relationships prefix-ht)))
+                  (_ term)))
+              (ruleml-document-performatives document)))
+     prefix-ht)))
 
 
-(defun transform-query (query relationships)
+(defun transform-query (query relationships prefix-ht)
   (-> query
       embedded-objectify
       unnest
-      (objectify relationships)
+      (objectify relationships prefix-ht)
       describute))
