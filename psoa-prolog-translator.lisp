@@ -115,10 +115,14 @@
                             (translate root)
                             (mapcar #'translate descriptors)))
                    ((ruleml-membership :oid oid :predicate predicate)
-                    (record-predicate-indicator "memterm" 2 recordp)
-                    (format stream "memterm(~A, ~A)"
-                            (translate oid)
-                            (translate predicate)))
+		    (match predicate
+		      ((ruleml-const :contents "Top")
+		       (format stream "true"))
+		      (_
+		       (record-predicate-indicator "memterm" 2 recordp)
+		       (format stream "memterm(~A, ~A)"
+			       (translate oid)
+			       (translate predicate)))))
                    ((or (ruleml-atom :root root :descriptors (list (ruleml-tuple :dep t :terms terms)))
                         (ruleml-expr :root root :terms (list (ruleml-tuple :dep t :terms terms))))
                     (let ((root-string (translate root)))
