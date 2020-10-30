@@ -3,6 +3,8 @@
 
 (named-readtables:in-readtable rutils-readtable)
 
+(defparameter *static-objectification-only* nil)
+
 (defun fresh-variable (&optional (prefix "Var"))
   (make-ruleml-genvar :name (format nil "~A" (gensym prefix))))
 
@@ -391,20 +393,26 @@ is objectify_d(\phi, \omega) if \omega is relational.
   (let* (vars
          (term (map-atom-transformer
                 (lambda (term &rest args &key external &allow-other-keys)
-                  (if (and (ruleml-atom-p term) external)
-                      term
-                      (if-it (predicate-name term prefix-ht)
-                             (multiple-value-bind (tuple-arities foundp)
-                                 (gethash it relationships)
-                               (declare (ignore tuple-arities))
-                               (if foundp
-                                   (apply #'objectify-dynamic term relationships
-                                          prefix-ht args)
-                                   (multiple-value-bind (term new-vars)
-                                       (apply #'objectify-static-diff term args)
-                                     (appendf vars new-vars)
-                                     term)))
-                             term)))
+                  (cond
+		    (*static-objectification-only*
+		     (multiple-value-bind (term new-vars)
+			 (apply #'objectify-static-diff term args)
+		       (appendf vars new-vars)
+		       term))
+		    ((and (ruleml-atom-p term) external)
+		     term)
+		    (t (if-it (predicate-name term prefix-ht)
+			      (multiple-value-bind (tuple-arities foundp)
+				  (gethash it relationships)
+				(declare (ignore tuple-arities))
+				(if foundp
+				    (apply #'objectify-dynamic term relationships
+					   prefix-ht args)
+				    (multiple-value-bind (term new-vars)
+					(apply #'objectify-static-diff term args)
+				      (appendf vars new-vars)
+				      term)))
+			      term))))
                 term)))
     (match term
       ((ruleml-forall :vars orig-vars :clause clause)
@@ -422,22 +430,23 @@ is objectify_d(\phi, \omega) if \omega is relational.
     ((ruleml-oidful-atom
       :oid oid
       :predicate (ruleml-atom :root root :descriptors descriptors))
-     (let ((terms (cons
-                   (make-ruleml-membership
-                    :oid oid
-                    :predicate root)
-                   (mapcar #`(match %
-                               ((or (ruleml-slot :dep t) (ruleml-tuple :dep t))
-                                (make-ruleml-oidful-atom
-                                 :oid oid
-                                 :predicate (make-ruleml-atom :root root
-                                                              :descriptors (list %))))
-                               ((or (ruleml-slot :dep nil) (ruleml-tuple :dep nil))
-                                (make-ruleml-oidful-atom
-                                 :oid oid
-                                 :predicate (make-ruleml-atom :root (make-ruleml-const :contents "Top")
-                                                              :descriptors (list %)))))
-                           descriptors))))
+     (let ((terms (nreverse
+		   (cons
+		    (make-ruleml-membership
+		     :oid oid
+		     :predicate root)
+		    (mapcar #`(match %
+				((or (ruleml-slot :dep t) (ruleml-tuple :dep t))
+				 (make-ruleml-oidful-atom
+				  :oid oid
+				  :predicate (make-ruleml-atom :root root
+							       :descriptors (list %))))
+				((or (ruleml-slot :dep nil) (ruleml-tuple :dep nil))
+				 (make-ruleml-oidful-atom
+				  :oid oid
+				  :predicate (make-ruleml-atom :root (make-ruleml-const :contents "Top")
+							       :descriptors (list %)))))
+			    descriptors)))))
        (if (single terms)
            (first terms)
            (make-ruleml-and :terms terms))))
@@ -553,6 +562,29 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                  (ruleml-prefix-iri-ref prefix)))
              :test #'equalp))
 
+
+(defun separate-existential-variables (term)
+  (transform-ast term
+		 (lambda (term &key positive negative &allow-other-keys)
+		   (match term
+		     ((ruleml-exists :vars vars :formula formula)
+		      (if (and (not positive) negative) ;; We are in a condition.
+			  (let ((renamed-evs (make-hash-table :test #'equalp)))
+			    (dolist (var vars)
+			      (sethash (ruleml-var-name var)
+				       renamed-evs
+				       (fresh-variable)))
+			    (transform-ast formula
+					   (lambda (term &key &allow-other-keys)
+					     (if (ruleml-var-p term)
+						 (multiple-value-bind (renamed-var foundp)
+						     (gethash (ruleml-var-name term) renamed-evs)
+						   (if foundp renamed-var term))
+						 term))))
+			  term))
+		     (_ term)))))
+
+
 (defun transform-document (document)
   (with ((prefix-ht (make-prefix-ht (ruleml-document-prefixes document))))
     (values
@@ -572,6 +604,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                            unnest
                                            (objectify relationships prefix-ht)
                                            skolemize
+					   separate-existential-variables
                                            describute
                                            flatten-externals
                                            split-conjuctive-conclusion)
@@ -590,4 +623,5 @@ is objectify_d(\phi, \omega) if \omega is relational.
       embedded-objectify
       unnest
       (objectify relationships prefix-ht)
+      separate-existential-variables
       describute))
