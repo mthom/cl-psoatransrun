@@ -50,8 +50,8 @@
       (-psoa-load-and-repl document)
       (progn (format t "Enter the path of Scryer Prolog: ")
              (finish-output)
-             (let ((*prolog-engine-path* (probe-file (pathname (read-line)))))
-               (psoa-load-and-repl document)))))
+             (setf *prolog-engine-path* (probe-file (pathname (read-line))))
+             (psoa-load-and-repl document))))
 
 (defun -psoa-load-and-repl (document)
   (with ((prolog-kb-string relationships prefix-ht (psoa-document->prolog document))
