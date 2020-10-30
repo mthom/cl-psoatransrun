@@ -4,12 +4,14 @@
 (defparameter *prolog-engine-path* nil)
 (defparameter *static-objectification-only* nil)
 (defparameter *all-solutions* nil)
+(defparameter *is-relational-p* nil)
 
 (defun psoa-document->prolog (document)
   (with ((document prefix-ht (transform-document (parse 'psoa-grammar::ruleml document))))
     (translate-document document prefix-ht)))
 
-(defun psoa-query->prolog (query prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
+(defun psoa-query->prolog (query prefix-ht &optional
+                             (relationships (make-hash-table :test #'equalp)))
   (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query))
       (transform-query relationships prefix-ht)
       (translate-query prefix-ht)))
@@ -41,7 +43,8 @@
                           (read-line *standard-input* nil))
         if line do
           (format t "~A~%" (psoa-query->prolog line prefix-ht relationships))
-          (write-line (psoa-query->prolog line prefix-ht relationships) (socket-stream engine-socket))
+          (write-line (psoa-query->prolog line prefix-ht relationships)
+                      (socket-stream engine-socket))
           (force-output (socket-stream engine-socket))
           (read-and-print-solutions engine-socket)))
 
@@ -54,7 +57,7 @@
              (psoa-load-and-repl document))))
 
 (defun -psoa-load-and-repl (document)
-  (with ((prolog-kb-string relationships prefix-ht (psoa-document->prolog document))
+  (with ((prolog-kb-string relationships is-relational-p prefix-ht (psoa-document->prolog document))
          (process (external-program:start *prolog-engine-path* nil
                          :input :stream
                          :output :stream)))
@@ -73,11 +76,12 @@
     (write-line "/scryer_server.pl')." (process-input-stream process))
     (finish-output (process-input-stream process))
 
-    ;; It's possible for the runtime to print warning messages (ie.,
-    ;; for singleton variables) in some cases. In those cases, ignore
-    ;; the junk output and try to read the port again.
-    (loop (handler-case
-              (with ((port (parse-integer (read-line (process-output-stream process))))
-                     (engine-socket (socket-connect "127.0.0.1" port)))
-                (psoa-repl engine-socket prefix-ht relationships))
-            (parse-error ())))))
+    (let ((*is-relational-p* is-relational-p))
+      ;; It's possible for the runtime to print warning messages (ie.,
+      ;; for singleton variables) in some cases. In those cases, ignore
+      ;; the junk output and try to read the port again.
+      (loop (handler-case
+                (with ((port (parse-integer (read-line (process-output-stream process))))
+                       (engine-socket (socket-connect "127.0.0.1" port)))
+                  (psoa-repl engine-socket prefix-ht relationships))
+              (parse-error ()))))))

@@ -13,7 +13,7 @@
     (format nil "~A.~%" (get-output-stream-string output-stream))))
 
 (defun translate-document (document prefix-ht &key (system :scryer))
-  (multiple-value-bind (prolog-kb-string relationships predicate-indicators)
+  (multiple-value-bind (prolog-kb-string relationships is-relational-p predicate-indicators)
       (translate-document- document prefix-ht)
     (ecase system
       (:scryer (let* ((stream (make-string-input-stream prolog-kb-string))
@@ -30,6 +30,7 @@
                    (format collated-stream "~A~%" line))
                    (values (get-output-stream-string collated-stream)
                            relationships
+                           is-relational-p
                            prefix-ht))))))
 
 (defun translate-document- (document prefix-ht)
@@ -37,13 +38,16 @@
          (prolog-kb-stream (make-string-output-stream))
          (performatives (ruleml-document-performatives document))
          (predicate-indicators (make-hash-table :test #'equalp))
-         (relationships))
+         (relationships)
+         (is-relational-p))
     (dolist (performative performatives)
       (match performative
-        ((ruleml-assert :items items :relationships assert-relationships)
+        ((ruleml-assert :items items :relationships assert-relationships
+                        :is-relational-p assert-is-relational-p)
          (unless (null relationships)
            (error "multiple Assert's in a single PSOA KB isn't yet supported"))
-         (setf relationships assert-relationships)
+         (setf relationships assert-relationships
+               is-relational-p assert-is-relational-p)
          (mapc #`(let ((item-predicate-indicators (-translate % prefix-ht prolog-kb-stream)))
                    (setf predicate-indicators
                          (merge-hts predicate-indicators item-predicate-indicators))
@@ -54,8 +58,8 @@
                  (-translate query-term prefix-ht prolog-kb-stream)))))
     (values (get-output-stream-string prolog-kb-stream)
             relationships
-            predicate-indicators
-            prefix-ht)))
+            is-relational-p
+            predicate-indicators)))
 
 (defun -translate (item prefix-ht stream &optional (assert-item-p t))
   (let ((predicate-indicators (make-hash-table :test #'equalp)))

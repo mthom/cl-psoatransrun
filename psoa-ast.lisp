@@ -44,15 +44,16 @@ standard (written between double quotation marks)."
 (defstruct (ruleml-assert (:include ruleml-ast-node))
   "An Assert(...) performative."
   (items nil :type list)
-  (relationships (make-hash-table :test #'equalp) :type hash-table))
+  (relationships (make-hash-table :test #'equalp) :type hash-table)
+  (is-relational-p nil :type boolean))
 
 (defstruct (ruleml-query (:include ruleml-ast-node))
   "A Query(...) performative."
-  (term (make-ruleml-or) :type ruleml-ast-node))
+  term)
 
 (defstruct (ruleml-naf (:include ruleml-ast-node))
   "A Naf(...) formula."
-  (formula (make-ruleml-and) :type ruleml-ast-node))
+  formula)
 
 (defstruct (ruleml-var (:include ruleml-ast-node))
   "A variable."

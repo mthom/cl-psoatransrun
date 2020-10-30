@@ -53,7 +53,10 @@
 
 
 (defun embedded-objectify (term)
-  (map-atom-transformer #'-embedded-objectify term))
+  (if (and (not psoatransrun::*static-objectification-only*)
+           psoatransrun::*is-relational-p*)
+      term
+      (map-atom-transformer #'-embedded-objectify term)))
 
 (defun -embedded-objectify (atom &key positive negative &allow-other-keys)
   (let (in-psoa-rest-p
@@ -229,11 +232,19 @@ where ?O is a fresh variable in the query.
   (make-ruleml-atom :root (make-ruleml-const :contents "_oid_cons")
                     :descriptors (list (make-ruleml-tuple :dep t :terms (cons root terms)))))
 
-(defun is-relationship-p (atom)
-  (let ((descriptors (ruleml-atom-descriptors atom)))
-    (and (single descriptors)
-         (ruleml-tuple-p (first descriptors))
-         (ruleml-tuple-dep (first descriptors)))))
+(defun is-relationship-p (term)
+  (transform-ast term
+                 (lambda (term &key &allow-other-keys)
+                   (match term
+                     ((ruleml-atom :descriptors descriptors)
+                      (unless (and (single descriptors)
+                                   (ruleml-tuple-p (first descriptors))
+                                   (ruleml-tuple-dep (first descriptors)))
+                        (return-from is-relationship-p nil)))
+                     ((or (ruleml-oidful-atom) (ruleml-membership))
+                      (return-from is-relationship-p nil))
+                     (_ term))))
+  t)
 
 (defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
   (if (and positive negative)
@@ -312,17 +323,18 @@ is objectify_d(\phi, \omega) if \omega is relational.
 (defun kb-relationships (ruleml-assert prefix-ht)
   (let ((relationships (make-hash-table :test #'equal))
         (blacklist))
-    (labels ((consider-atom (atom)
-               (if (is-relationship-p atom)
-                   (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors atom))))
-                            (gethash (predicate-name atom prefix-ht) relationships))
-                   (push (ruleml-atom-root atom) blacklist)))
+    (labels ((consider-atom (term head-atom)
+               (if (is-relationship-p term)
+                   (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors head-atom))))
+                            (gethash (predicate-name head-atom prefix-ht) relationships))
+                   (push (predicate-name (ruleml-atom-root head-atom) prefix-ht)
+                         blacklist)))
              (consider-assert-item (item &key &allow-other-keys)
                (match item
                  ((ruleml-atom)
-                  (consider-atom item))
+                  (consider-atom item item))
                  ((ruleml-implies :conclusion (ruleml-atom))
-                  (consider-atom (ruleml-implies-conclusion item)))
+                  (consider-atom item (ruleml-implies-conclusion item)))
                  ((ruleml-forall :clause clause)
                   (consider-assert-item clause)))))
       (transform-ast ruleml-assert
@@ -330,7 +342,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
                      :propagator #'consider-assert-item)
       (dolist (root blacklist)
         (remhash root relationships))
-      relationships)))
+      ;; return values: relationship hash table, boolean that is t iff
+      ;; the Assert is completely relational.
+      (values relationships (null blacklist)))))
 
 
 (defun match-builtin-function (local)
@@ -388,6 +402,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
      const)))
 
 (defun objectify (term relationships prefix-ht)
+  (when (and (not psoatransrun::*static-objectification-only*)
+             psoatransrun::*is-relational-p*)
+    (return-from objectify term))
   (let* (vars
          (term (map-atom-transformer
                 (lambda (term &rest args &key external &allow-other-keys)
@@ -594,20 +611,22 @@ is objectify_d(\phi, \omega) if \omega is relational.
       (mapcar (lambda (term)
                 (match term
                   ((ruleml-assert :items items)
-                   (let ((relationships (kb-relationships term prefix-ht)))
-                     (make-ruleml-assert
-                      :items (mapcan #`(-> %
-                                           subclass-rewrite
-                                           embedded-objectify
-                                           unnest
-                                           (objectify relationships prefix-ht)
-                                           skolemize
-                                           separate-existential-variables
-                                           describute
-                                           flatten-externals
-                                           split-conjuctive-conclusion)
-                                     items)
-                      :relationships relationships)))
+                   (with ((relationships is-relational-p (kb-relationships term prefix-ht)))
+                     (let ((*is-relational-p* is-relational-p))
+                       (make-ruleml-assert
+                        :items (mapcan #`(-> %
+                                             subclass-rewrite
+                                             embedded-objectify
+                                             unnest
+                                             (objectify relationships prefix-ht)
+                                             skolemize
+                                             separate-existential-variables
+                                             describute
+                                             flatten-externals
+                                             split-conjuctive-conclusion)
+                                       items)
+                        :relationships relationships
+                        :is-relational-p is-relational-p))))
                   ((ruleml-query)
                    (let ((relationships (make-hash-table :test #'equal)))
                      (transform-query term relationships prefix-ht)))
