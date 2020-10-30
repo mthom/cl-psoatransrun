@@ -4,7 +4,7 @@
 (defparameter *inside-psoa-rest* nil)
 
 (defun pprint-ruleml-document (stream document)
-  (pprint-logical-block (stream nil :prefix "RuleML (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "RuleML(" :suffix ")")
     (pprint-indent :block -4 stream)
     (pprint-newline :mandatory stream)
     (when-it (ruleml-document-base document)
@@ -21,13 +21,13 @@
       (pprint-newline :mandatory stream))
     (when-it (ruleml-document-performatives document)
       (pprint-linear stream it nil))
-    (pprint-indent :block (- (length "RuleML (")) stream)
+    (pprint-indent :block (- (length "RuleML(")) stream)
     (pprint-newline :mandatory stream)))
 
 (set-pprint-dispatch 'ruleml-document 'pprint-ruleml-document)
 
 (defun pprint-ruleml-base (stream base)
-  (pprint-logical-block (stream nil :prefix "Base (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Base(" :suffix ")")
     (write-char #\< stream)
     (write (ruleml-base-iri-ref base) :stream stream :escape nil)
     (write-char #\> stream)))
@@ -35,7 +35,7 @@
 (set-pprint-dispatch 'ruleml-base 'pprint-ruleml-base)
 
 (defun pprint-ruleml-prefix (stream prefix)
-  (pprint-logical-block (stream nil :prefix "Prefix (" :suffix ")")
+  (pprint-logical-block (stream nil :prefix "Prefix(" :suffix ")")
     (write (ruleml-prefix-name prefix) :stream stream :escape nil)
     (write-char #\: stream)
     (write-char #\< stream)
@@ -196,7 +196,7 @@
     (pprint-indent :block -3 stream)
     (pprint-newline :mandatory stream)
     (pprint-linear stream (ruleml-and-terms item) nil)
-    (pprint-indent :block (- (length "And (")) stream)
+    (pprint-indent :block (- (length "And(")) stream)
     (pprint-newline :mandatory stream)))
 
 (set-pprint-dispatch 'ruleml-and 'pprint-ruleml-and)
@@ -206,7 +206,7 @@
     (pprint-indent :block -2 stream)
     (pprint-newline :mandatory stream)
     (pprint-linear stream (ruleml-or-terms item) nil)
-    (pprint-indent :block (- (length "Or (")) stream)
+    (pprint-indent :block (- (length "Or(")) stream)
     (pprint-newline :mandatory stream)))
 
 (set-pprint-dispatch 'ruleml-or 'pprint-ruleml-or)

@@ -452,7 +452,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                   (equal item-var-name (ruleml-var-name var)))))
              (skolem-term ()
                (if (null forall-vars)
-                   (make-ruleml-const :contents (fresh-skolem-constant))
+                   (fresh-skolem-constant)
                    (make-ruleml-atom :root (fresh-skolem-constant)
                                      :descriptors (list (make-ruleml-tuple :dep t
                                                                            :terms forall-vars)))))

@@ -195,14 +195,14 @@
         atomic))
 
 (defrule and-formula
-    (and "And" (* (or whitespace comment)) #\( (* (or formula whitespace)) #\))
+    (and "And" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))
   (:destructure (and ws1 lparen formulas rparen &bounds start)
     (declare (ignore and ws1 lparen rparen))
     (make-ruleml-and :terms (remove nil formulas)
                      :position start)))
 
 (defrule or-formula
-    (and "Or" (* (or whitespace comment)) #\( (* (or formula whitespace)) #\))
+    (and "Or" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))
   (:destructure (or ws1 lparen formulas rparen &bounds start)
     (declare (ignore or ws1 lparen rparen))
     (make-ruleml-or :terms (remove nil formulas)
@@ -461,6 +461,7 @@
   (:lambda (const &bounds start)
     (typecase const
       (ruleml-string const)
+      (ruleml-const const)
       (t (make-ruleml-const :contents const :position start)))))
 
 (defrule const-string
@@ -473,7 +474,9 @@
     (and #\? (? pn-local))
   (:destructure (question-mark pn-local &bounds start)
     (declare (ignore question-mark))
-    (make-ruleml-var :name pn-local :position start)))
+    (if pn-local
+        (make-ruleml-var :name pn-local :position start)
+        (psoa-transformers::fresh-variable))))
 
 (defrule sym-space
     (or angle-bracket-iri curie))
