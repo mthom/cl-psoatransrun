@@ -2,6 +2,8 @@
 (in-package #:psoatransrun)
 
 (defparameter *prolog-engine-path* nil)
+(defparameter *static-objectification-only* nil)
+(defparameter *all-solutions* nil)
 
 (defun psoa-document->prolog (document)
   (with ((document prefix-ht (transform-document (parse 'psoa-grammar::ruleml document))))
@@ -24,7 +26,8 @@
                  (t
                   ;; the use of subseq is a kludge to remove quotation marks printed by Scryer
                   (write-string (subseq solution 1 (1- (length solution))))))
-           (read-char)))
+           (unless *all-solutions*
+             (read-char))))
 
 (defun psoa-repl (engine-socket prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
   (loop (handler-case (-psoa-repl engine-socket prefix-ht relationships)
