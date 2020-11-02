@@ -181,120 +181,132 @@ and :external for consumption by \"key\".
 
 Finally, the keyword :external indicates whether the formula being
 traversed is inside an External(...)."
-  (match term
-    ((ruleml-document :base base :prefixes prefixes
-                      :imports imports :performatives performatives)
-     (funcall key
-              (make-ruleml-document
-               :base (funcall propagator base)
-               :prefixes (mapcar propagator prefixes)
-               :imports (mapcar propagator imports)
-               :performatives (mapcar propagator performatives))))
-    ((ruleml-assert :items terms)
-     (funcall key (make-ruleml-assert :items (mapcar propagator terms))
-              :positive positive
-              :negative negative))
-    ((ruleml-tuple :terms terms :dep dep)
-     (funcall key (make-ruleml-tuple :terms (mapcar propagator terms) :dep dep)
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-and :terms terms)
-     (funcall key (make-ruleml-and :terms (mapcar propagator terms))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-or :terms terms)
-     (funcall key (make-ruleml-or :terms (mapcar propagator terms))
-              :positive positive
-              :negative negative
-              :external external))
-    ((or (ruleml-base)
-         (ruleml-prefix)
-         (ruleml-import)
-         (ruleml-pname-ln)
-         (ruleml-const)
-         (ruleml-var))
-     (funcall key term
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-query :term query)
-     (funcall key (make-ruleml-query :term (funcall propagator query :positive t :negative t))))
-    ((ruleml-naf :formula naf)
-     (funcall key (make-ruleml-naf :formula (funcall propagator naf))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-slot  :name name :filler filler :dep dep)
-     (funcall key (make-ruleml-slot :dep dep
-                                    :name (funcall propagator name)
-                                    :filler (funcall propagator filler))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-expr :root root :terms terms)
-     (funcall key (make-ruleml-expr :root (funcall propagator root)
-                                    :terms (mapcar propagator terms))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-subclass-rel :sub sub :super super)
-     (funcall key (make-ruleml-subclass-rel :sub (funcall propagator sub)
-                                            :super (funcall propagator super))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-equal :left left :right right)
-     (funcall key (make-ruleml-equal :left  (funcall propagator left)
-                                     :right (funcall propagator right))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-implies :conclusion conclusion :condition condition)
-     (funcall key (make-ruleml-implies
-                   :conclusion (funcall propagator conclusion
-                                        :positive t :negative nil)
-                   :condition (funcall propagator condition
-                                       :positive nil :negative t))
-              :positive positive
-              :negative negative))
-    ((ruleml-exists :vars vars :formula formula)
-     (funcall key (make-ruleml-exists :vars (mapcar propagator vars)
-                                      :formula (funcall propagator formula))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-atom :root root :descriptors descriptors)
-     (funcall key (make-ruleml-atom :root (funcall propagator root)
-                                    :descriptors (mapcar propagator descriptors))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-oidful-atom :oid oid :predicate atom)
-     (funcall key (make-ruleml-oidful-atom :oid (funcall propagator oid)
-                                           :predicate (funcall propagator atom))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-forall :vars vars :clause clause)
-     (funcall key (make-ruleml-forall :vars (mapcar propagator vars)
-                                      :clause (funcall propagator clause))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-external :atom atom)
-     (funcall key (make-ruleml-external :atom (funcall propagator atom :external t))
-              :positive positive
-              :negative negative
-              :external external))
-    ((ruleml-membership :oid oid :predicate predicate)
-     (funcall key (make-ruleml-membership :oid (funcall propagator oid)
-                                          :predicate (funcall propagator predicate))
-              :positive positive
-              :negative negative
-              :external external))
-    (_ (funcall key term
+  (flet ((default-propagator (term)
+           (funcall propagator term
+                    :positive positive
+                    :negative negative
+                    :external external)))
+    (match term
+      ((ruleml-document :base base :prefixes prefixes
+                        :imports imports :performatives performatives)
+       (funcall key
+                (make-ruleml-document
+                 :base (default-propagator base)
+                 :prefixes (mapcar #'default-propagator prefixes)
+                 :imports (mapcar #'default-propagator imports)
+                 :performatives (mapcar #'default-propagator performatives))))
+      ((ruleml-assert :items terms)
+       (funcall key (make-ruleml-assert :items (mapcar #'default-propagator terms))
+                :positive positive
+                :negative negative))
+      ((ruleml-tuple :terms terms :dep dep)
+       (funcall key (make-ruleml-tuple :terms (mapcar #'default-propagator terms) :dep dep)
                 :positive positive
                 :negative negative
-                :external external))))
+                :external external))
+      ((ruleml-and :terms terms)
+       (funcall key (make-ruleml-and :terms (mapcar #'default-propagator terms))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-or :terms terms)
+       (funcall key (make-ruleml-or :terms (mapcar #'default-propagator terms))
+                :positive positive
+                :negative negative
+                :external external))
+      ((or (ruleml-base)
+           (ruleml-prefix)
+           (ruleml-import)
+           (ruleml-pname-ln)
+           (ruleml-const)
+           (ruleml-var))
+       (funcall key term
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-query :term query)
+       (funcall key (make-ruleml-query :term (funcall propagator query
+                                                      :positive t
+                                                      :negative t
+                                                      :external external))))
+      ((ruleml-naf :formula naf)
+       (funcall key (make-ruleml-naf :formula (default-propagator naf))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-slot  :name name :filler filler :dep dep)
+       (funcall key (make-ruleml-slot :dep dep
+                                      :name (default-propagator name)
+                                      :filler (default-propagator filler))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-expr :root root :terms terms)
+       (funcall key (make-ruleml-expr :root (default-propagator root)
+                                      :terms (mapcar #'default-propagator terms))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-subclass-rel :sub sub :super super)
+       (funcall key (make-ruleml-subclass-rel :sub (default-propagator sub)
+                                              :super (default-propagator super))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-equal :left left :right right)
+       (funcall key (make-ruleml-equal :left  (default-propagator left)
+                                       :right (default-propagator right))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-implies :conclusion conclusion :condition condition)
+       (funcall key (make-ruleml-implies
+                     :conclusion (funcall propagator conclusion
+                                          :positive t :negative nil)
+                     :condition (funcall propagator condition
+                                         :positive nil :negative t))
+                :positive positive
+                :negative negative))
+      ((ruleml-exists :vars vars :formula formula)
+       (funcall key (make-ruleml-exists :vars (mapcar #'default-propagator vars)
+                                        :formula (default-propagator formula))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-atom :root root :descriptors descriptors)
+       (funcall key (make-ruleml-atom :root (default-propagator root)
+                                      :descriptors (mapcar #'default-propagator descriptors))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-oidful-atom :oid oid :predicate atom)
+       (funcall key (make-ruleml-oidful-atom :oid (default-propagator oid)
+                                             :predicate (default-propagator atom))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-forall :vars vars :clause clause)
+       (funcall key (make-ruleml-forall :vars (mapcar #'default-propagator vars)
+                                        :clause (default-propagator clause))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-external :atom atom)
+       (funcall key (make-ruleml-external
+                     :atom (funcall propagator atom
+                                    :positive positive
+                                    :negative negative
+                                    :external t))
+                :positive positive
+                :negative negative
+                :external external))
+      ((ruleml-membership :oid oid :predicate predicate)
+       (funcall key (make-ruleml-membership :oid (default-propagator oid)
+                                            :predicate (default-propagator predicate))
+                :positive positive
+                :negative negative
+                :external external))
+      (_ (funcall key term
+                  :positive positive
+                  :negative negative
+                  :external external)))))
