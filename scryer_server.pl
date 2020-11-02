@@ -16,7 +16,7 @@
 start_server :-
     socket_server_open('127.0.0.1':Port, ServerSocket),
     nl, write(Port), nl,
-    socket_server_accept(ServerSocket, Client, Stream, [eof_action(eof_code)]),
+    socket_server_accept(ServerSocket, _, Stream, [eof_action(eof_code)]),
     eval_loop(Stream),
     socket_server_close(ServerSocket).
 

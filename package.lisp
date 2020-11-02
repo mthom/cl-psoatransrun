@@ -13,6 +13,7 @@
            #:ruleml-document-prefixes
            #:ruleml-document-imports
            #:ruleml-document-performatives
+           #:ruleml-document-prefix-ht
            #:ruleml-base
            #:ruleml-base-iri-ref
            #:ruleml-prefix
@@ -157,7 +158,7 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun
-  (:use #:cl #:external-program #:psoa-grammar #:psoa-transformers
+  (:use #:cl #:external-program #:psoa-ast #:psoa-grammar #:psoa-transformers
         #:psoa-prolog-translator #:rutils #:trivia #:usocket)
   (:export #:repl)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))

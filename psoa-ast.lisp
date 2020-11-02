@@ -15,6 +15,7 @@ EBNF
 (http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Presentation_Syntax)."
   (base nil :type list)
   (prefixes nil :type list)
+  (prefix-ht (make-hash-table :test #'equalp) :type hash-table)
   (imports nil :type list)
   (performatives nil :type list))
 
@@ -75,7 +76,7 @@ standard (written between double quotation marks)."
 
 (defstruct (ruleml-pname-ln (:include ruleml-ast-node))
   "A predicate name prefixed with a namespace, one form of a constant."
-  (name "" :type string)
+  (name "" :type (or null string))
   (url "" :type string))
 
 (defstruct (ruleml-expr (:include ruleml-ast-node))

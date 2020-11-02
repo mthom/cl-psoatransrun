@@ -12,32 +12,47 @@
                 nil)
     (format nil "~A.~%" (get-output-stream-string output-stream))))
 
-(defun translate-document (document prefix-ht &key (system :scryer))
-  (multiple-value-bind (prolog-kb-string relationships is-relational-p predicate-indicators)
-      (translate-document- document prefix-ht)
+(defun sort-kb (prolog-kb-string predicate-indicators)
+  (let* ((stream (make-string-input-stream prolog-kb-string))
+         (lines (loop for line = (read-line stream nil)
+                      for pred-ind in predicate-indicators
+                      while line collect (cons line pred-ind))))
+    (remove-duplicates
+     (mapcar #'car
+             (sort lines (lambda (p1 p2)
+                           ;; Sort lexicographically by predicate indicator.
+                           (or (string< (car p1) (car p2))
+                               (and (<= (cdr p1) (cdr p2))
+                                    (string= (car p1) (car p2)))))
+                   :key #'cdr))
+     :test #'equal)))
+
+(defun translate-document (document &key (system :scryer))
+  (multiple-value-bind (prolog-kb-string relationships
+                        is-relational-p predicate-indicators)
+      (translate-document- document)
     (ecase system
-      (:scryer (let* ((stream (make-string-input-stream prolog-kb-string))
-                      (collated-stream (make-string-output-stream))
-                      (lines (loop for line = (read-line stream nil)
-                                   while line collect line))
-                      (lines (sort lines #'string<=)))
+      (:scryer (let ((collated-stream (make-string-output-stream))
+                     (lines (sort-kb prolog-kb-string predicate-indicators))
+                     (predicate-indicators (alist->ht (mapcar #`(cons % t) predicate-indicators)
+                                                      :test #'equalp)))
                  (format collated-stream ":- use_module(library(tabling)).~%~%")
                  (loop for key being each hash-key of predicate-indicators
                        do (format collated-stream ":- table ~A/~A.~%"
-                                  (lt key) (rt key)))
+                                  (car key) (cdr key)))
                  (format collated-stream "~%")
                  (dolist (line lines)
                    (format collated-stream "~A~%" line))
                    (values (get-output-stream-string collated-stream)
                            relationships
-                           is-relational-p
-                           prefix-ht))))))
+                           is-relational-p))))))
 
-(defun translate-document- (document prefix-ht)
+(defun translate-document- (document)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
          (prolog-kb-stream (make-string-output-stream))
          (performatives (ruleml-document-performatives document))
-         (predicate-indicators (make-hash-table :test #'equalp))
+         (predicate-indicators)
+         (prefix-ht (ruleml-document-prefix-ht document))
          (relationships)
          (is-relational-p))
     (dolist (performative performatives)
@@ -48,9 +63,8 @@
            (error "multiple Assert's in a single PSOA KB isn't yet supported"))
          (setf relationships assert-relationships
                is-relational-p assert-is-relational-p)
-         (mapc #`(let ((item-predicate-indicators (-translate % prefix-ht prolog-kb-stream)))
-                   (setf predicate-indicators
-                         (merge-hts predicate-indicators item-predicate-indicators))
+         (mapc #`(let ((item-predicate-indicator (-translate % prefix-ht prolog-kb-stream)))
+                   (push item-predicate-indicator predicate-indicators)
                    (format prolog-kb-stream ".~%"))
                items))
         ((ruleml-query :term query-term)
@@ -59,13 +73,13 @@
     (values (get-output-stream-string prolog-kb-stream)
             relationships
             is-relational-p
-            predicate-indicators)))
+            (nreverse predicate-indicators))))
 
 (defun -translate (item prefix-ht stream &optional (assert-item-p t))
-  (let ((predicate-indicators (make-hash-table :test #'equalp)))
+  (let (predicate-indicators)
     (macrolet ((record-predicate-indicator (name arity recordp)
                  `(when ,recordp
-                    (sethash (pair ,name ,arity) predicate-indicators t))))
+                    (setf predicate-indicators (cons ,name ,arity)))))
       (labels ((translate (item &optional stream recordp)
                  (match item
                    ((ruleml-oidful-atom
@@ -74,19 +88,26 @@
                                              :descriptors (list (ruleml-tuple :dep nil
                                                                               :terms terms))))
                     (record-predicate-indicator "tupterm" (1+ (length terms)) recordp)
-                    (format stream "tupterm(~A, ~{~A~^, ~})"
-                            (translate oid)
-                            (mapcar #'translate terms)))
+                    (if terms
+                        (format stream "tupterm(~A, ~{~A~^, ~})"
+                                (translate oid)
+                                (mapcar #'translate terms))
+                        (format stream "tupterm(~A)"
+                                (translate oid))))
                    ((ruleml-oidful-atom
                      :oid oid
                      :predicate (ruleml-atom :root root
                                              :descriptors (list (ruleml-tuple :dep t
                                                                               :terms terms))))
                     (record-predicate-indicator "prdtupterm" (+ 2 (length terms)) recordp)
-                    (format stream "prdtupterm(~A, ~A, ~{~A~^, ~})"
-                            (translate oid)
-                            (translate root)
-                            (mapcar #'translate terms)))
+                    (if terms
+                        (format stream "prdtupterm(~A, ~A, ~{~A~^, ~})"
+                             (translate oid)
+                             (translate root)
+                             (mapcar #'translate terms))
+                        (format stream "prdtupterm(~A, ~A)"
+                                (translate oid)
+                                (translate root))))
                    ((ruleml-oidful-atom
                      :oid oid
                      :predicate (ruleml-atom :root (ruleml-const :contents "Top")
@@ -114,10 +135,14 @@
                      :oid oid
                      :predicate (ruleml-atom :root root :descriptors descriptors))
                     (record-predicate-indicator "prdtupterm" (+ 2 (length descriptors)) recordp)
-                    (format stream "prdtupterm(~A, ~A, ~{~A~^, ~})"
-                            (translate oid)
-                            (translate root)
-                            (mapcar #'translate descriptors)))
+                    (if descriptors
+                        (format stream "prdtupterm(~A, ~A, ~{~A~^, ~})"
+                                (translate oid)
+                                (translate root)
+                                (mapcar #'translate descriptors))
+                        (format stream "prdtupterm(~A, ~A)"
+                                (translate oid)
+                                (translate root))))
                    ((ruleml-membership :oid oid :predicate predicate)
 		            (match predicate
 		              ((ruleml-const :contents "Top")
@@ -131,18 +156,21 @@
                         (ruleml-expr :root root :terms (list (ruleml-tuple :dep t :terms terms))))
                     (let ((root-string (translate root)))
                       (record-predicate-indicator (format nil "~A" root-string) (length terms) recordp)
-                      (if (null terms)
-                          (format stream "~A"
-                                  root-string)
+                      (if terms
                           (format stream "~A(~{~A~^, ~})"
                                   root-string
-                                  (mapcar #'translate terms)))))
+                                  (mapcar #'translate terms))
+                          (format stream "~A"
+                                  root-string))))
                    ((ruleml-expr :root root :terms terms)
                     (let ((root-string (translate root)))
                       (record-predicate-indicator root-string (length terms) recordp)
-                      (format stream "~A(~{~A~^, ~})"
-                              root-string
-                              (mapcar #'translate terms))))
+                      (if terms
+                          (format stream "~A(~{~A~^, ~})"
+                                  root-string
+                                  (mapcar #'translate terms))
+                          (format stream "~A"
+                                  root-string))))
                    ((ruleml-equal :left left :right (ruleml-external :atom atom))
                     (format stream "is(~A, ~A)"
                             (translate left)
@@ -153,10 +181,12 @@
                             (translate right)))
                    ((ruleml-and :terms terms)
                     (format stream "(~{~A~^, ~})"
-                            (mapcar #'translate terms)))
+                            (remove nil (mapcar #'translate terms))))
                    ((ruleml-or :terms terms)
-                    (format stream "(~{~A~^; ~})"
-                            (mapcar #'translate terms)))
+                    (if terms
+                        (format stream "(~{~A~^; ~})"
+                                (mapcar #'translate terms))
+                        (format stream "")))
                    ((or (ruleml-exists :formula formula)
                         (ruleml-forall :clause formula))
                     (translate formula stream))
@@ -174,11 +204,15 @@
                    ((ruleml-const :contents const)
                     (match const
                       ((ruleml-pname-ln :name ns :url local)
+                       (record-predicate-indicator
+                        (make-url-const ns local prefix-ht stream)
+                        0
+                        recordp)
                        (if ns
                            (make-url-const ns local prefix-ht stream)
                            (format stream "~A" local)))
                       ((type string)
-                       (format stream "\"~A\"" const)
+                       (record-predicate-indicator const 0 recordp)
                        (if (eql (char const 0) #\_)
                            (format stream "'~A'" const)
                            (format stream "'_~A'" const)))

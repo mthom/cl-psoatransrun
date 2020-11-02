@@ -571,13 +571,6 @@ is objectify_d(\phi, \omega) if \omega is relational.
     (_ (flatten-and atomic-formula))))
 
 
-(defun make-prefix-ht (prefixes)
-  (alist->ht (loop for prefix in prefixes
-                   collect (cons (ruleml-prefix-name prefix)
-                                 (ruleml-prefix-iri-ref prefix)))
-             :test #'equalp))
-
-
 (defun separate-existential-variables (term)
   (transform-ast term
                  (lambda (term &key positive negative &allow-other-keys)
@@ -601,38 +594,40 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 
 (defun transform-document (document)
-  (with ((prefix-ht (make-prefix-ht (ruleml-document-prefixes document))))
-    (values
-     (make-ruleml-document
-      :base (ruleml-document-base document)
-      :prefixes (ruleml-document-prefixes document)
-      :imports (ruleml-document-imports document)
-      :performatives
-      (mapcar (lambda (term)
-                (match term
-                  ((ruleml-assert :items items)
-                   (with ((relationships is-relational-p (kb-relationships term prefix-ht)))
-                     (let ((*is-relational-p* is-relational-p))
-                       (make-ruleml-assert
-                        :items (mapcan #`(-> %
-                                             subclass-rewrite
-                                             embedded-objectify
-                                             unnest
-                                             (objectify relationships prefix-ht)
-                                             skolemize
-                                             separate-existential-variables
-                                             describute
-                                             flatten-externals
-                                             split-conjuctive-conclusion)
-                                       items)
-                        :relationships relationships
-                        :is-relational-p is-relational-p))))
-                  ((ruleml-query)
-                   (let ((relationships (make-hash-table :test #'equal)))
-                     (transform-query term relationships prefix-ht)))
-                  (_ term)))
-              (ruleml-document-performatives document)))
-     prefix-ht)))
+  (with ((prefix-ht (alist->ht (loop for prefix in (ruleml-document-prefixes document)
+                                     collect (cons (ruleml-prefix-name prefix)
+                                                   (ruleml-prefix-iri-ref prefix)))
+                               :test #'equalp)))
+    (make-ruleml-document
+     :base (ruleml-document-base document)
+     :prefixes (ruleml-document-prefixes document)
+     :prefix-ht prefix-ht
+     :imports (ruleml-document-imports document)
+     :performatives
+     (mapcar (lambda (term)
+               (match term
+                 ((ruleml-assert :items items)
+                  (with ((relationships is-relational-p (kb-relationships term prefix-ht)))
+                    (let ((*is-relational-p* is-relational-p))
+                      (make-ruleml-assert
+                       :items (mapcan #`(-> %
+                                            subclass-rewrite
+                                            embedded-objectify
+                                            unnest
+                                            (objectify relationships prefix-ht)
+                                            skolemize
+                                            separate-existential-variables
+                                            describute
+                                            flatten-externals
+                                            split-conjuctive-conclusion)
+                                      items)
+                       :relationships relationships
+                       :is-relational-p is-relational-p))))
+                 ((ruleml-query)
+                  (let ((relationships (make-hash-table :test #'equal)))
+                    (transform-query term relationships prefix-ht)))
+                 (_ term)))
+             (ruleml-document-performatives document)))))
 
 
 (defun transform-query (query relationships prefix-ht)
