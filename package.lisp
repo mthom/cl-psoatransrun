@@ -139,9 +139,15 @@
            #:make-ruleml-membership)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
+
+;; See http://clhs.lisp.se/Body/m_defpkg.htm for documentation on the
+;; defpackage macro options.
+
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)
-  (:export #:pprint-ruleml-document))
+  (:export #:pprint-ruleml-document)
+  "Contains functions to pretty-print ruleml-ast-node subtyped objects to streams.
+Sets the pprint dispatch table accordingly.")
 
 (defpackage #:psoa-grammar
   (:use #:cl #:esrap #:psoa-ast)

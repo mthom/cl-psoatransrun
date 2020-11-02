@@ -2,9 +2,24 @@
 (in-package #:psoatransrun)
 
 (defparameter *prolog-engine-path* nil)
-(defparameter *static-objectification-only* nil)
+
+
+#|
+Global variables for command-line options.
+|#
+
+(defparameter *static-objectification-only* nil
+  "If t, use static undifferentiated objectification during the objectify transformation.")
+
 (defparameter *all-solutions* nil)
 (defparameter *is-relational-p* nil)
+
+
+#|
+Functions for translating PSOA RuleML documents and queries
+to equivalent Prolog, and for sending those translations to
+the Prolog engine and receiving back solutions.
+|#
 
 (defun psoa-document->prolog (document)
   (let ((document (transform-document (parse 'psoa-grammar::ruleml document))))
@@ -79,7 +94,7 @@
       ;; Loading the server engine, which is initialized automatically
       ;; within the module via a ":- initialization(...)." directive.
       (write-string "use_module('" (process-input-stream process))
-      (write-string "/home/mark/Projects/CL/PSOATransRun" (process-input-stream process))
+      (write-string "/home/mark/cl-psoatransrun" (process-input-stream process))
       (write-line "/scryer_server.pl')." (process-input-stream process))
       (finish-output (process-input-stream process))
 
