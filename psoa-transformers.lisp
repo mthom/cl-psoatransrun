@@ -114,7 +114,7 @@
     (labels ((check-oid (oid)
                (match oid
                  ((ruleml-var :name name)
-                  (if (null name)
+                  (if (string= name "")
                       (fresh-variable)
                       oid))
                  ("_" (fresh-constant))
@@ -171,18 +171,18 @@ then objectify(\omega) = Exists ?j (?j#f(...)).
 is a fresh variable scoped universally by the enclosing rule.
 |#
 
-(defun objectify-static-diff (term &key positive negative &allow-other-keys)
+(defun objectify-static (term &key positive negative &allow-other-keys)
   (let (vars)
     (values
      (match term
-       ((ruleml-atom)
+       ((or (ruleml-atom) (ruleml-const))
         (let ((ground-atom-p (ground-atom-p term)))
           (cond ((and ground-atom-p (not positive) (not negative)) ; 1
                  (make-ruleml-oidful-atom :oid (fresh-constant)
-                                          :predicate term))
-                ((or (not (or ground-atom-p
-                              positive
-                              negative))
+                                          :predicate (if (ruleml-const-p term)
+                                                         (make-ruleml-atom :root term)
+                                                         term)))
+                ((or (not (or ground-atom-p positive negative))
                      (and positive negative)
                      positive)          ; 2
                  (let ((var (fresh-variable)))
@@ -232,18 +232,23 @@ where ?O is a fresh variable in the query.
   (make-ruleml-atom :root (make-ruleml-const :contents "_oid_cons")
                     :descriptors (list (make-ruleml-tuple :dep t :terms (cons root terms)))))
 
-(defun is-relationship-p (term)
-  (transform-ast term
-                 (lambda (term &key &allow-other-keys)
-                   (match term
-                     ((ruleml-atom :descriptors descriptors)
-                      (unless (and (single descriptors)
-                                   (ruleml-tuple-p (first descriptors))
-                                   (ruleml-tuple-dep (first descriptors)))
-                        (return-from is-relationship-p nil)))
-                     ((or (ruleml-oidful-atom) (ruleml-membership))
-                      (return-from is-relationship-p nil))
-                     (_ term))))
+(defun is-relationship-p (term prefix-ht)
+  (if-it (predicate-name term prefix-ht)
+         (transform-ast term
+                  (lambda (term &key &allow-other-keys)
+                    (match term
+                      ((ruleml-atom :descriptors descriptors)
+                       (when (and (string= it (predicate-name term prefix-ht))
+                                  (not (and (single descriptors)
+                                            (ruleml-tuple-p (first descriptors))
+                                            (ruleml-tuple-dep (first descriptors)))))
+                         (return-from is-relationship-p nil))
+                       term)
+                      ((or (ruleml-oidful-atom) (ruleml-membership))
+                       (when (string= it (predicate-name term prefix-ht))
+                         (return-from is-relationship-p nil))
+                       term)
+                      (_ term)))))
   t)
 
 (defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
@@ -252,7 +257,7 @@ where ?O is a fresh variable in the query.
       (match term
         ((ruleml-atom :root root :descriptors descriptors)
          (cond ((when-it (gethash root relationships)
-                  (and (is-relationship-p term)
+                  (and (is-relationship-p term prefix-ht)
                        (member (length (ruleml-tuple-terms (first descriptors)))
                                it)))
                 term) ;; 2.1
@@ -324,7 +329,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
   (let ((relationships (make-hash-table :test #'equal))
         (blacklist))
     (labels ((consider-atom (term head-atom)
-               (if (is-relationship-p term)
+               (if (is-relationship-p term prefix-ht)
                    (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors head-atom))))
                             (gethash (predicate-name head-atom prefix-ht) relationships))
                    (push (predicate-name (ruleml-atom-root head-atom) prefix-ht)
@@ -411,7 +416,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                   (cond
                     (psoatransrun::*static-objectification-only*
                      (multiple-value-bind (term new-vars)
-                         (apply #'objectify-static-diff term args)
+                         (apply #'objectify-static term args)
                        (appendf vars new-vars)
                        term))
                     ((and (ruleml-atom-p term) external)
@@ -424,7 +429,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                     (apply #'objectify-dynamic term relationships
                                            prefix-ht args)
                                     (multiple-value-bind (term new-vars)
-                                        (apply #'objectify-static-diff term args)
+                                        (apply #'objectify-static term args)
                                       (appendf vars new-vars)
                                       term)))
                               term))))

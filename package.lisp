@@ -145,9 +145,7 @@
 
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)
-  (:export #:pprint-ruleml-document)
-  "Contains functions to pretty-print ruleml-ast-node subtyped objects to streams.
-Sets the pprint dispatch table accordingly.")
+  (:export #:pprint-ruleml-document))
 
 (defpackage #:psoa-grammar
   (:use #:cl #:esrap #:psoa-ast)

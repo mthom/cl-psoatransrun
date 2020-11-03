@@ -10,6 +10,7 @@
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
 :- use_module(library(iso_ext)).
+:- use_module(library(lists)).
 :- use_module(library(sockets)).
 
 
@@ -26,16 +27,35 @@ eval_loop(Stream) :-
     (  Term == end_of_file ->
        true
     ;
-       catch(call(Term), _, false),
-       compile_solution_string(VNNames, VarString),
-       write_term(Stream, VarString, []),
-       write_term(Stream, '\n', []),
+       read_term(Stream, _, [variable_names(UVNNames)]),
+       split_vars(VNNames, UVNNames, RVNNames),
+       catch(findall(RVNNames, Term, Solutions0), _, false),
+       sort(Solutions0, Solutions),
+       (  Solutions == [[]] ->
+          write_term(Stream, 'Yes\n', [])
+       ;
+          member(RVNNames1, Solutions),
+          compile_solution_string(RVNNames1, VarString),
+          write_term(Stream, VarString, []),
+          write_term(Stream, '\n', []),
+          false
+       ),
        flush_output(Stream),
        false
     ;
        write_term(Stream, 'No\n', []),
        flush_output(Stream),
        eval_loop(Stream)
+    ).
+
+
+split_vars([], _, []).
+split_vars([VN | VNs], UVNNames, RVNs) :-
+    (  member(VN, UVNNames) ->
+       split_vars(VNs, UVNNames, RVNs)
+    ;
+       RVNs = [VN | RVNs1],
+       split_vars(VNs, UVNNames, RVNs1)
     ).
 
 

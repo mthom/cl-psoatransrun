@@ -37,13 +37,13 @@ the Prolog engine and receiving back solutions.
 
 (defun read-and-print-solutions (socket-stream)
   (loop for solution = (read-line socket-stream nil nil)
-        do (cond ((null solution)
-                  (return-from read-and-print-solutions))
-                 ((equalp solution "no")
+        do (cond ((string= solution "No")
                   (format t "~%No~%")
                   (return-from read-and-print-solutions))
-                 ((equalp solution "[]")
-                  (format t "~%Yes "))
+                 ((string= solution "Yes")
+                  (format t "~%Yes~%")
+                  (read-line socket-stream nil nil) ;; Ignore following 'No'
+                  (return-from read-and-print-solutions))
                  (t
                   ;; the use of subseq is a kludge to remove quotation marks printed by Scryer
                   (write-string (subseq solution 1 (1- (length solution))))))
@@ -62,11 +62,13 @@ the Prolog engine and receiving back solutions.
     (loop for line = (progn (write-string "> ")
                             (read-line *standard-input* nil))
           if line do
-            (format t "~A~%" (psoa-query->prolog line prefix-ht relationships))
-            (write-line (psoa-query->prolog line prefix-ht relationships)
-                        socket-stream)
-            (force-output socket-stream)
-            (read-and-print-solutions socket-stream))))
+            (multiple-value-bind (query-string toplevel-var-string)
+                (psoa-query->prolog line prefix-ht relationships)
+              (format t "~A~%" query-string)
+              (write-line query-string socket-stream)
+              (write-line toplevel-var-string socket-stream)
+              (force-output socket-stream)
+              (read-and-print-solutions socket-stream)))))
 
 (defun psoa-load-and-repl (document)
   (if (and *prolog-engine-path* (probe-file *prolog-engine-path*))
@@ -94,7 +96,7 @@ the Prolog engine and receiving back solutions.
       ;; Loading the server engine, which is initialized automatically
       ;; within the module via a ":- initialization(...)." directive.
       (write-string "use_module('" (process-input-stream process))
-      (write-string "/home/mark/cl-psoatransrun" (process-input-stream process))
+      (write-string "/home/mark/Projects/CL/PSOATransRun" (process-input-stream process))
       (write-line "/scryer_server.pl')." (process-input-stream process))
       (finish-output (process-input-stream process))
 

@@ -5,12 +5,19 @@
 
 (defun translate-query (query prefix-ht)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
+         (query-vars)
          (output-stream (make-string-output-stream)))
+    (transform-ast (ruleml-query-term query)
+                   (lambda (term &key &allow-other-keys)
+                     (when (ruleml-genvar-p term)
+                       (pushnew (ruleml-var-name term) query-vars))
+                     term))
     (-translate (ruleml-query-term query)
                 prefix-ht
                 output-stream
                 nil)
-    (format nil "~A.~%" (get-output-stream-string output-stream))))
+    (values (format nil "~A." (get-output-stream-string output-stream))
+            (format nil "[~{Q~A~^, ~}]." query-vars))))
 
 (defun sort-kb (prolog-kb-string predicate-indicators)
   (let* ((stream (make-string-input-stream prolog-kb-string))
