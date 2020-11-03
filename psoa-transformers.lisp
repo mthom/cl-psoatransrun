@@ -19,27 +19,28 @@
                      (return-from ground-atom-p nil))))
   t)
 
+(defun make-ruleml-oidful (oid predicate)
+  (if (ruleml-const-p predicate)
+      (make-ruleml-membership :oid oid :predicate predicate)
+      (make-ruleml-oidful-atom :oid oid :predicate predicate)))
+
 (defun subclass-rewrite (term)
-  (flet ((make-ruleml-oidful (oid predicate)
-           (if (ruleml-const-p predicate)
-               (make-ruleml-membership :oid oid :predicate predicate)
-               (make-ruleml-oidful-atom :oid oid :predicate predicate))))
-    (match term
-      ((ruleml-subclass-rel :super super :sub sub)
-       (let* ((var   (fresh-variable))
-              (head  (make-ruleml-oidful var super))
-              (body  (make-ruleml-oidful var sub)))
-         (make-ruleml-forall :vars (list var)
-                             :clause (make-ruleml-implies :conclusion head
-                                                          :condition  body))))
-      ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
-       (let* ((var   (fresh-variable))
-              (head  (make-ruleml-oidful var super))
-              (body  (make-ruleml-oidful var sub)))
-         (make-ruleml-forall :vars (cons var vars)
-                             :clause (make-ruleml-implies :conclusion head
-                                                          :condition  body))))
-      (_ term))))
+  (match term
+    ((ruleml-subclass-rel :super super :sub sub)
+     (let* ((var   (fresh-variable))
+            (head  (make-ruleml-oidful var super))
+            (body  (make-ruleml-oidful var sub)))
+       (make-ruleml-forall :vars (list var)
+                           :clause (make-ruleml-implies :conclusion head
+                                                        :condition  body))))
+    ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
+     (let* ((var   (fresh-variable))
+            (head  (make-ruleml-oidful var super))
+            (body  (make-ruleml-oidful var sub)))
+       (make-ruleml-forall :vars (cons var vars)
+                           :clause (make-ruleml-implies :conclusion head
+                                                        :condition  body))))
+    (_ term)))
 
 
 (defun map-atom-transformer (transformer term &rest args &key &allow-other-keys)
@@ -178,22 +179,20 @@ is a fresh variable scoped universally by the enclosing rule.
        ((or (ruleml-atom) (ruleml-const))
         (let ((ground-atom-p (ground-atom-p term)))
           (cond ((and ground-atom-p (not positive) (not negative)) ; 1
-                 (make-ruleml-oidful-atom :oid (fresh-constant)
-                                          :predicate (if (ruleml-const-p term)
-                                                         (make-ruleml-atom :root term)
-                                                         term)))
+                 (make-ruleml-oidful (fresh-constant)
+                                     (if (ruleml-const-p term)
+                                         (make-ruleml-atom :root term)
+                                         term)))
                 ((or (not (or ground-atom-p positive negative))
                      (and positive negative)
-                     positive)          ; 2
+                     positive)         ; 2
                  (let ((var (fresh-variable)))
                    (make-ruleml-exists
                     :vars (list var)
-                    :formula (make-ruleml-oidful-atom :oid var
-                                                      :predicate term))))
+                    :formula (make-ruleml-oidful var term))))
                 (t (let ((var (fresh-variable))) ; 3
                      (push var vars)
-                     (make-ruleml-oidful-atom :oid var
-                                              :predicate term))))))
+                     (make-ruleml-oidful var term))))))
        (_ term))
      vars)))
 
