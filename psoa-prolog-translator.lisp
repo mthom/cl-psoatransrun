@@ -109,9 +109,9 @@
                     (record-predicate-indicator "prdtupterm" (+ 2 (length terms)) recordp)
                     (if terms
                         (format stream "prdtupterm(~A, ~A, ~{~A~^, ~})"
-                             (translate oid)
-                             (translate root)
-                             (mapcar #'translate terms))
+                                (translate oid)
+                                (translate root)
+                                (mapcar #'translate terms))
                         (format stream "prdtupterm(~A, ~A)"
                                 (translate oid)
                                 (translate root))))
@@ -193,7 +193,7 @@
                     (if terms
                         (format stream "(~{~A~^; ~})"
                                 (mapcar #'translate terms))
-                        (format stream "")))
+                        (format stream "false")))
                    ((or (ruleml-exists :formula formula)
                         (ruleml-forall :clause formula))
                     (translate formula stream assert-item-p))
