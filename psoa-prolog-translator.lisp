@@ -215,9 +215,7 @@
                         (make-url-const ns local prefix-ht)
                         0
                         recordp)
-                       (if ns
-                           (make-url-const ns local prefix-ht stream)
-                           (format stream "~A" local)))
+                       (make-url-const ns local prefix-ht stream))
                       ((type string)
                        (record-predicate-indicator const 0 recordp)
                        (if (eql (char const 0) #\_)

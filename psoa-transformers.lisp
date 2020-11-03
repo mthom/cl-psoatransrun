@@ -332,11 +332,11 @@ is objectify_d(\phi, \omega) if \omega is relational.
                (if (is-relationship-p term prefix-ht)
                    (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors head-atom))))
                             (gethash (predicate-name head-atom prefix-ht) relationships))
-                   (push (predicate-name (ruleml-atom-root head-atom) prefix-ht)
+                   (push (predicate-name head-atom prefix-ht)
                          blacklist)))
              (consider-assert-item (item &key &allow-other-keys)
                (match item
-                 ((ruleml-atom)
+                 ((or (ruleml-oidful-atom) (ruleml-atom))
                   (consider-atom item item))
                  ((ruleml-implies :conclusion (ruleml-atom))
                   (consider-atom item (ruleml-implies-conclusion item)))
