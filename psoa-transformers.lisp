@@ -86,17 +86,17 @@
                         (declare (special in-psoa-rest-p))
                         #1#)))
                  ((ruleml-oidful-atom :oid oid :predicate predicate)
-                  (make-ruleml-oidful-atom
-                   :oid (substep oid)
-                   :predicate (transform-ast predicate
-                                             (lambda (term &key &allow-other-keys) term)
-                                             :propagator #'walker)))
+                  (make-ruleml-oidful
+                   (substep oid)
+                   (transform-ast predicate
+                                  (lambda (term &key &allow-other-keys) term)
+                                  :propagator #'substep)))
                  ((ruleml-membership :oid oid :predicate predicate)
-                  (make-ruleml-membership
-                   :oid (substep oid)
-                   :predicate (transform-ast predicate
-                                             (lambda (term &key &allow-other-keys) term)
-                                             :propagator #'walker)))
+                  (make-ruleml-oidful
+                   (substep oid)
+                   (transform-ast predicate
+                                  (lambda (term &key &allow-other-keys) term)
+                                  :propagator #'substep)))
                  (_ (transform-ast
                      term
                      (lambda (term &key &allow-other-keys) term)
