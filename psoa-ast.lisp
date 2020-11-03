@@ -25,7 +25,7 @@ EBNF
 
 (defstruct (ruleml-prefix (:include ruleml-ast-node))
   "A PSOA RuleML Prefix element."
-  (name "" :type string)
+  (name "" :type (or null string))
   (iri-ref "" :type string))
 
 (defstruct (ruleml-const (:include ruleml-ast-node))

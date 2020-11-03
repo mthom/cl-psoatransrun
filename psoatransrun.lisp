@@ -42,10 +42,11 @@ the Prolog engine and receiving back solutions.
                   (return-from read-and-print-solutions))
                  ((string= solution "Yes")
                   (format t "~%Yes~%")
-                  (read-line socket-stream nil nil) ;; Ignore following 'No'
+                  (read-line socket-stream nil nil) ;; Ignore following 'No'.
                   (return-from read-and-print-solutions))
                  (t
-                  ;; the use of subseq is a kludge to remove quotation marks printed by Scryer
+                  ;; The use of subseq is a kludge to remove quotation
+                  ;; marks printed by Scryer.
                   (write-string (subseq solution 1 (1- (length solution))))))
            (unless *all-solutions*
              (read-char))))

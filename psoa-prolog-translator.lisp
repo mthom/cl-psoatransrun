@@ -70,10 +70,10 @@
            (error "multiple Assert's in a single PSOA KB isn't yet supported"))
          (setf relationships assert-relationships
                is-relational-p assert-is-relational-p)
-         (mapc #`(let ((item-predicate-indicator (-translate % prefix-ht prolog-kb-stream)))
-                   (push item-predicate-indicator predicate-indicators)
-                   (format prolog-kb-stream ".~%"))
-               items))
+         (dolist (item items)
+           (let ((item-predicate-indicator (-translate item prefix-ht prolog-kb-stream)))
+             (push item-predicate-indicator predicate-indicators)
+             (format prolog-kb-stream ".~%"))))
         ((ruleml-query :term query-term)
          (format prolog-kb-stream "?- ~A."
                  (-translate query-term prefix-ht prolog-kb-stream)))))
@@ -196,7 +196,7 @@
                         (format stream "")))
                    ((or (ruleml-exists :formula formula)
                         (ruleml-forall :clause formula))
-                    (translate formula stream))
+                    (translate formula stream assert-item-p))
                    ((ruleml-external :atom atom)
                     (translate atom stream))
                    ((ruleml-implies :conclusion conclusion :condition condition)
@@ -212,7 +212,7 @@
                     (match const
                       ((ruleml-pname-ln :name ns :url local)
                        (record-predicate-indicator
-                        (make-url-const ns local prefix-ht stream)
+                        (make-url-const ns local prefix-ht)
                         0
                         recordp)
                        (if ns

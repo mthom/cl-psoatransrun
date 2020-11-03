@@ -54,7 +54,7 @@
          (* (or whitespace comment))
          #\(
          (* (or whitespace comment))
-         name
+         (? name)
          (* (or whitespace comment))
          #\:
          (* (or whitespace comment))
