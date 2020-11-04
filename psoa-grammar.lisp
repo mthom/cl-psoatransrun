@@ -374,12 +374,13 @@
 (defrule expr-short
     (and subterm
          #\(
+	 (* (or whitespace comment))
          (or (+ (and subterm (! "+>") (* (or whitespace comment))))
              (* (and tuple-d (* (or whitespace comment)))))
          (* (and slot-d (* (or whitespace comment))))
          #\))
-  (:destructure (root lparen tuple-terms slot-terms rparen &bounds start)
-    (declare (ignore lparen rparen))
+  (:destructure (root lparen ws tuple-terms slot-terms rparen &bounds start)
+    (declare (ignore lparen ws rparen))
     (let* ((remove-nil-from-sublists (alexandria:compose #'first (alexandria:curry #'remove nil)))
            (tuple-terms (mapcar remove-nil-from-sublists tuple-terms))
            (slot-terms  (mapcar remove-nil-from-sublists slot-terms)))
@@ -444,9 +445,16 @@
         atom-oidless-long))
 
 (defrule external-expr
-    (and "External" (* (or whitespace comment)) #\( expr #\) (* (or whitespace comment)))
-  (:destructure (external ws1 lparen expr rparen ws2 &bounds start)
-    (declare (ignore external ws1 lparen rparen ws2))
+    (and "External"
+	 (* (or whitespace comment))
+	 #\(
+	 (* (or whitespace comment))
+	 expr
+	 (* (or whitespace comment))
+	 #\)
+	 (* (or whitespace comment)))
+  (:destructure (external ws1 lparen ws2 expr ws3 rparen ws4 &bounds start)
+    (declare (ignore external ws1 lparen rparen ws2 ws3 ws4))
     (make-ruleml-external :atom expr :position start)))
 
 (defrule const
