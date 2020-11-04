@@ -159,13 +159,24 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-prolog-translator
-  (:use #:cl #:psoa-ast  #:psoa-transformers #:rutils #:trivia)
+  (:use #:cl #:psoa-ast #:psoa-transformers #:rutils #:trivia)
   (:export #:translate-document #:translate-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun
   (:use #:cl #:external-program #:psoa-ast #:psoa-grammar #:psoa-transformers
         #:psoa-prolog-translator #:rutils #:trivia #:usocket)
-  (:export #:*all-solutions* #:psoa-load-and-repl #:quit-prolog-engine
-           #:init-prolog-engine)
+  (:export #:*all-solutions*
+           #:*prolog-engine-path*
+           #:connect-to-prolog-process
+           #:init-prolog-process
+           #:psoa-document->prolog
+           #:psoa-load-and-repl
+           #:psoa-query->prolog
+           #:quit-prolog-engine
+           #:send-query-to-prolog-engine)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
+
+(defpackage #:psoatransrun-tests
+  (:use #:cl #:external-program #:pathname-utils #:psoatransrun
+        #:split-sequence #:usocket))

@@ -29,10 +29,10 @@ Global variables for command-line options.
                      (return-from ground-atom-p nil))))
   t)
 
-(defun make-ruleml-oidful (oid predicate)
-  (if (ruleml-const-p predicate)
-      (make-ruleml-membership :oid oid :predicate predicate)
-      (make-ruleml-oidful-atom :oid oid :predicate predicate)))
+(defun make-ruleml-oidful (oid predicate &optional (position 0))
+  (if (ruleml-atom-p predicate)
+      (make-ruleml-oidful-atom :oid oid :predicate predicate :position position)
+      (make-ruleml-membership :oid oid :predicate predicate :position position)))
 
 (defun subclass-rewrite (term)
   (match term

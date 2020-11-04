@@ -374,7 +374,7 @@
 (defrule expr-short
     (and subterm
          #\(
-	 (* (or whitespace comment))
+	     (* (or whitespace comment))
          (or (+ (and subterm (! "+>") (* (or whitespace comment))))
              (* (and tuple-d (* (or whitespace comment)))))
          (* (and slot-d (* (or whitespace comment))))
@@ -473,9 +473,12 @@
       (t (make-ruleml-const :contents const :position start)))))
 
 (defrule const-string
-    (and #\" unicode-string "^^" sym-space)
-  (:lambda (substrings &bounds start)
-    (make-ruleml-string :contents (apply #'concatenate substrings)
+    (and unicode-string "^^" sym-space)
+  (:destructure (unicode-string carets sym-space &bounds start)
+    (make-ruleml-string :contents (concatenate 'string
+                                               (ruleml-string-contents unicode-string)
+                                               carets
+                                               sym-space)
                         :position start)))
 
 (defrule var

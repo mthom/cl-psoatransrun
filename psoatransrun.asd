@@ -4,11 +4,12 @@
   :license "BSD-3"
   :version "0.9"
   :serial t
-  :depends-on (#:esrap #:external-program #:rutils #:trivia #:usocket)
+  :depends-on (#:esrap #:external-program #:pathname-utils #:rutils #:trivia #:usocket)
   :components ((:file "package")
                (:file "psoa-ast")
                (:file "psoa-grammar")
                (:file "psoa-pprint")
                (:file "psoa-prolog-translator")
                (:file "psoa-transformers")
-               (:file "psoatransrun")))
+               (:file "psoatransrun")
+               (:file "psoatransrun-tests")))

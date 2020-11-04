@@ -40,7 +40,7 @@ standard (written between double quotation marks)."
 (defstruct (ruleml-import (:include ruleml-ast-node))
   "The contents of a PSOA RuleML Import(...) directive."
   (iri-ref "" :type string)
-  (profile "" :type string))
+  (profile "" :type (or null string)))
 
 (defstruct (ruleml-assert (:include ruleml-ast-node))
   "An Assert(...) performative."

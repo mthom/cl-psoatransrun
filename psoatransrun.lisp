@@ -35,10 +35,10 @@ the Prolog engine and receiving back solutions.
 (defun read-and-print-solutions (socket-stream)
   (loop for solution = (read-line socket-stream nil nil)
         do (cond ((string= solution "No")
-                  (format t "~%No~%")
+                  (format t "~%no~%")
                   (return-from read-and-print-solutions))
                  ((string= solution "Yes")
-                  (format t "~%Yes~%")
+                  (format t "~%yes~%")
                   (read-line socket-stream nil nil) ;; Ignore following 'No'.
                   (return-from read-and-print-solutions))
                  (t
@@ -55,18 +55,21 @@ the Prolog engine and receiving back solutions.
                     (esrap:esrap-error-text condition)
                     (esrap:esrap-error-position condition))))))
 
-(defun -psoa-repl (engine-socket prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
+(defun send-query-to-prolog-engine (socket-stream query-string prefix-ht relationships)
+  (multiple-value-bind (query-string toplevel-var-string)
+      (psoa-query->prolog query-string prefix-ht relationships)
+    (write-line query-string socket-stream)
+    (write-line toplevel-var-string socket-stream)
+    (force-output socket-stream)
+    (read-and-print-solutions socket-stream)))
+
+(defun -psoa-repl (engine-socket prefix-ht relationships)
   (let ((socket-stream (socket-stream engine-socket)))
     (loop for line = (progn (write-string "> ")
                             (read-line *standard-input* nil))
-          if line do
-            (multiple-value-bind (query-string toplevel-var-string)
-                (psoa-query->prolog line prefix-ht relationships)
-              (format t "~A~%" query-string)
-              (write-line query-string socket-stream)
-              (write-line toplevel-var-string socket-stream)
-              (force-output socket-stream)
-              (read-and-print-solutions socket-stream)))))
+          if line do (send-query-to-prolog-engine
+                      socket-stream line
+                      prefix-ht relationships))))
 
 (defun psoa-load-and-repl (document)
   (if (and *prolog-engine-path* (probe-file *prolog-engine-path*))
@@ -94,24 +97,27 @@ the Prolog engine and receiving back solutions.
     (write-line "/scryer_server.pl')." process-input-stream)
     (finish-output process-input-stream)))
 
+(defun connect-to-prolog-process (process)
+  ;; It's possible for the runtime to print warning messages (ie.,
+  ;; for singleton variables) in some cases. In those cases, ignore
+  ;; the junk output and try to read the port again.
+  (loop (handler-case
+            (let* ((port (parse-integer (read-line (process-output-stream process)))))
+              (return-from connect-to-prolog-process
+                (socket-connect "127.0.0.1" port)))
+          (parse-error ()))))
+
 (defun -psoa-load-and-repl (document)
   (multiple-value-bind (prolog-kb-string relationships is-relational-p prefix-ht)
       (psoa-document->prolog document)
     (let* ((process (external-program:start *prolog-engine-path* nil
                                             :input :stream
-                                            :output :stream))
-           (process-output-stream (process-output-stream process)))
+                                            :output :stream)))
       (format t "The translated KB:~%~%~A" prolog-kb-string)
       (init-prolog-process prolog-kb-string process)
 
       (unwind-protect
-           (let ((*is-relational-p* is-relational-p))
-             ;; It's possible for the runtime to print warning messages (ie.,
-             ;; for singleton variables) in some cases. In those cases, ignore
-             ;; the junk output and try to read the port again.
-             (loop (handler-case
-                       (let* ((port (parse-integer (read-line process-output-stream)))
-                              (engine-socket (socket-connect "127.0.0.1" port)))
-                         (psoa-repl engine-socket prefix-ht relationships))
-                     (parse-error ()))))
+           (let ((*is-relational-p* is-relational-p)
+                 (engine-socket (connect-to-prolog-process process)))
+             (psoa-repl engine-socket prefix-ht relationships))
         (quit-prolog-engine process)))))
