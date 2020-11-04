@@ -483,9 +483,8 @@ is objectify_d(\phi, \omega) if \omega is relational.
              (skolemize-head (term &key positive negative &allow-other-keys)
                (match term
                  ((guard (ruleml-exists :vars vars :formula formula)
-                         (and positive (not negative))) ;; the exists is in a conclusion.
-                  (let ((vars (alist->ht (mapcar #`(cons (ruleml-var-name %) (skolem-term))
-                                                 vars)
+                         (or positive (not negative))) ;; the exists is in a conclusion or fact.
+                  (let ((vars (alist->ht (mapcar #`(cons (ruleml-var-name %) (skolem-term)) vars)
                                          :test #'equalp)))
                     (transform-ast formula
                                    (lambda (term &key &allow-other-keys)
