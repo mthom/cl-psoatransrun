@@ -3,6 +3,16 @@
 
 (named-readtables:in-readtable rutils-readtable)
 
+#|
+Global variables for command-line options.
+|#
+
+(defparameter *static-objectification-only* nil
+  "If t, use static undifferentiated objectification during the objectify transformation.")
+
+(defparameter *is-relational-p* nil)
+
+
 (defun fresh-variable (&optional (prefix "Var"))
   (make-ruleml-genvar :name (format nil "~A" (gensym prefix))))
 
@@ -54,8 +64,8 @@
 
 
 (defun embedded-objectify (term)
-  (if (and (not psoatransrun::*static-objectification-only*)
-           psoatransrun::*is-relational-p*)
+  (if (and (not *static-objectification-only*)
+           *is-relational-p*)
       term
       (map-atom-transformer #'-embedded-objectify term)))
 
@@ -443,14 +453,14 @@ is objectify_d(\phi, \omega) if \omega is relational.
      const)))
 
 (defun objectify (term relationships prefix-ht)
-  (when (and (not psoatransrun::*static-objectification-only*)
-             psoatransrun::*is-relational-p*)
+  (when (and (not *static-objectification-only*)
+             *is-relational-p*)
     (return-from objectify term))
   (let* (vars
          (term (map-atom-transformer
                 (lambda (term &rest args &key external &allow-other-keys)
                   (cond
-                    (psoatransrun::*static-objectification-only*
+                    (*static-objectification-only*
                      (multiple-value-bind (term new-vars)
                          (apply #'objectify-static term args)
                        (appendf vars new-vars)
@@ -660,7 +670,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                     (multiple-value-bind (relationships is-relational-p)
                         (kb-relationships (make-ruleml-assert :items first-stage-items)
                                           prefix-ht)
-                      (let ((psoatransrun::*is-relational-p* is-relational-p))
+                      (let ((*is-relational-p* is-relational-p))
                         (make-ruleml-assert
                          :items (mapcan #`(-> (objectify % relationships prefix-ht)
                                               skolemize

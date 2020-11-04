@@ -4,6 +4,10 @@
 (require :rutils)
 (require :trivia)
 
+
+;; See http://clhs.lisp.se/Body/m_defpkg.htm for documentation on the
+;; defpackage macro options.
+
 (defpackage #:psoa-ast
   (:use #:cl #:rutils #:trivia)
   (:export #:transform-ast
@@ -140,9 +144,6 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 
-;; See http://clhs.lisp.se/Body/m_defpkg.htm for documentation on the
-;; defpackage macro options.
-
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)
   (:export #:pprint-ruleml-document))
@@ -153,7 +154,8 @@
 
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
-  (:export #:make-url-const #:transform-document #:transform-query)
+  (:export #:make-url-const #:transform-document #:transform-query
+           #:*is-relational-p*  #:*static-objectification-only*)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-prolog-translator
@@ -164,6 +166,6 @@
 (defpackage #:psoatransrun
   (:use #:cl #:external-program #:psoa-ast #:psoa-grammar #:psoa-transformers
         #:psoa-prolog-translator #:rutils #:trivia #:usocket)
-  (:export #:repl)
+  (:export #:*all-solutions* #:psoa-load-and-repl #:quit-prolog-engine
+           #:init-prolog-engine)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
-
