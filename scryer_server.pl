@@ -6,6 +6,7 @@
 
 :- module(psoatransrun_server, []).
 
+:- use_module(library(atts)).
 :- use_module(library(charsio)).
 :- use_module(library(dcgs)).
 :- use_module(library(format)).
@@ -13,6 +14,7 @@
 :- use_module(library(lists)).
 :- use_module(library(sockets)).
 
+:- attribute ruleml_var/1.
 
 start_server :-
     socket_server_open('127.0.0.1':Port, ServerSocket),
@@ -67,15 +69,15 @@ compile_variable_names([VNName=Var | VNEqs], [NewVNName | VNNames], [Var | Vars]
     compile_variable_names(VNEqs, VNNames, Vars).
 
 compile_solution_string(VNEqs, VarString) :-
-    compile_variable_names(VNEqs, VNNames, Terms),
-    variable_preprocessing(Terms, 0),
+    compile_variable_names(VNEqs, VNNames, Vars),
+    variable_preprocessing(Vars, 0),
     !,
-    phrase(write_var_eqs(VNNames, Terms), VarString).
+    phrase(write_var_eqs(VNNames, Vars), VarString).
 
 variable_preprocessing([], _).
 variable_preprocessing([Term | Terms], VarCount0) :-
     (  var(Term) ->
-       phrase(format_("Var~d", [VarCount0]), Term),
+       put_atts(Term, +ruleml_var(VarCount0)),
        VarCount1 is VarCount0 + 1,
        variable_preprocessing(Terms, VarCount1)
     ;
@@ -93,7 +95,10 @@ phrase_maplist([Arg | Args], DCG, Delimiter) -->
     ).
 
 write_psoa_term(Term) -->
-    (  { partial_string(Term) } ->
+    (  { var(Term) } ->
+       { get_atts(Term, +ruleml_var(VarCount)) },
+       format_("Var~d", [VarCount])
+    ;  { partial_string(Term) } ->
        format_("\"~s\"", [Term])
     ;
        { functor(Term, F, _) },
