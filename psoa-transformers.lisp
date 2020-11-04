@@ -185,7 +185,7 @@ is a fresh variable scoped universally by the enclosing rule.
                                          term)))
                 ((or (not (or ground-atom-p positive negative))
                      (and positive negative)
-                     positive)         ; 2
+                     positive)          ; 2
                  (let ((var (fresh-variable)))
                    (make-ruleml-exists
                     :vars (list var)
@@ -247,7 +247,8 @@ where ?O is a fresh variable in the query.
                        (when (string= it (predicate-name term prefix-ht))
                          (return-from is-relationship-p nil))
                        term)
-                      (_ term)))))
+                      (_ term))))
+         (return-from is-relationship-p nil))
   t)
 
 (defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
@@ -274,7 +275,8 @@ where ?O is a fresh variable in the query.
                                prefix-ht
                                :positive positive
                                :negative negative))))))
-        ((ruleml-oidful-atom :oid oid :predicate (ruleml-atom :root root :descriptors descriptors))
+        ((ruleml-oidful-atom :oid oid
+                             :predicate (ruleml-atom :root root :descriptors descriptors))
          (cond ((or (not (ruleml-var-p oid)) ;; 2.2
                     (some (lambda (term)
                             (or (ruleml-slot-p term)
@@ -331,8 +333,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                (if (is-relationship-p term prefix-ht)
                    (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors head-atom))))
                             (gethash (predicate-name head-atom prefix-ht) relationships))
-                   (push (predicate-name head-atom prefix-ht)
-                         blacklist)))
+                   (push (predicate-name head-atom prefix-ht) blacklist)))
              (consider-assert-item (item &key &allow-other-keys)
                (match item
                  ((or (ruleml-oidful-atom) (ruleml-atom))
@@ -340,10 +341,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
                  ((ruleml-implies :conclusion (ruleml-atom))
                   (consider-atom item (ruleml-implies-conclusion item)))
                  ((ruleml-forall :clause clause)
-                  (consider-assert-item clause)))))
-      (transform-ast ruleml-assert
-                     (lambda (term &key &allow-other-keys) term)
-                     :propagator #'consider-assert-item)
+                  (consider-assert-item clause)))
+               item))
+      (transform-ast ruleml-assert #'consider-assert-item)
       (dolist (root blacklist)
         (remhash root relationships))
       ;; return values: relationship hash table, boolean that is t iff
@@ -474,34 +474,35 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 (defun skolemize (term)
   (let (forall-vars)
-    (labels ((vars-are-equal-p (item var)
-               (match item
-                 ((ruleml-var :name item-var-name)
-                  (equal item-var-name (ruleml-var-name var)))))
-             (skolem-term ()
+    (labels ((skolem-term ()
                (if (null forall-vars)
                    (fresh-skolem-constant)
                    (make-ruleml-atom :root (fresh-skolem-constant)
                                      :descriptors (list (make-ruleml-tuple :dep t
                                                                            :terms forall-vars)))))
-             (skolemize-head (term)
+             (skolemize-head (term &key positive negative &allow-other-keys)
                (match term
-                 ((ruleml-implies :conclusion conclusion :condition condition)
-                  (make-ruleml-implies :conclusion (skolemize-head conclusion)
-                                       :condition condition))
-                 ((ruleml-exists :vars vars :formula formula)
-                  (transform-ast formula
-                                 (lambda (term &key &allow-other-keys)
-                                   (if (member term vars :test #'vars-are-equal-p)
-                                       (skolem-term)
-                                       term))))
+                 ((guard (ruleml-exists :vars vars :formula formula)
+                         (and positive (not negative))) ;; the exists is in a conclusion.
+                  (let ((vars (alist->ht (mapcar #`(cons (ruleml-var-name %) (skolem-term))
+                                                 vars)
+                                         :test #'equalp)))
+                    (transform-ast formula
+                                   (lambda (term &key &allow-other-keys)
+                                     (if (ruleml-var-p term)
+                                         (multiple-value-bind (skolem-term foundp)
+                                             (gethash (ruleml-var-name term) vars)
+                                           (if foundp
+                                               skolem-term
+                                               term))
+                                         term)))))
                  (_ term))))
       (match term
         ((ruleml-forall :vars vars :clause clause)
          (setf forall-vars (remove-if #'ruleml-genvar-p vars))
          (make-ruleml-forall :vars vars
-                             :clause (skolemize-head clause)))
-        (_ (skolemize-head term))))))
+                             :clause (transform-ast clause #'skolemize-head)))
+        (_ (transform-ast term #'skolemize-head))))))
 
 
 (defun flatten-externals (term)
@@ -616,22 +617,24 @@ is objectify_d(\phi, \omega) if \omega is relational.
      (mapcar (lambda (term)
                (match term
                  ((ruleml-assert :items items)
-                  (with ((relationships is-relational-p (kb-relationships term prefix-ht)))
-                    (let ((*is-relational-p* is-relational-p))
-                      (make-ruleml-assert
-                       :items (mapcan #`(-> %
-                                            subclass-rewrite
-                                            embedded-objectify
-                                            unnest
-                                            (objectify relationships prefix-ht)
-                                            skolemize
-                                            separate-existential-variables
-                                            describute
-                                            flatten-externals
-                                            split-conjuctive-conclusion)
-                                      items)
-                       :relationships relationships
-                       :is-relational-p is-relational-p))))
+                  (let ((first-stage-items (mapcar #`(-> (subclass-rewrite %)
+                                                         embedded-objectify
+                                                         unnest)
+                                                   items)))
+                    (multiple-value-bind (relationships is-relational-p)
+                        (kb-relationships (make-ruleml-assert :items first-stage-items)
+                                          prefix-ht)
+                      (let ((psoatransrun::*is-relational-p* is-relational-p))
+                        (make-ruleml-assert
+                         :items (mapcan #`(-> (objectify % relationships prefix-ht)
+                                              skolemize
+                                              separate-existential-variables
+                                              describute
+                                              flatten-externals
+                                              split-conjuctive-conclusion)
+                                        first-stage-items)
+                         :relationships relationships
+                         :is-relational-p is-relational-p)))))
                  ((ruleml-query)
                   (let ((relationships (make-hash-table :test #'equal)))
                     (transform-query term relationships prefix-ht)))

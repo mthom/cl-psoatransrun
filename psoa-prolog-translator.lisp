@@ -162,7 +162,7 @@
                    ((or (ruleml-atom :root root :descriptors (list (ruleml-tuple :dep t :terms terms)))
                         (ruleml-expr :root root :terms (list (ruleml-tuple :dep t :terms terms))))
                     (let ((root-string (translate root)))
-                      (record-predicate-indicator (format nil "~A" root-string) (length terms) recordp)
+                      (record-predicate-indicator root-string (length terms) recordp)
                       (if terms
                           (format stream "~A(~{~A~^, ~})"
                                   root-string
