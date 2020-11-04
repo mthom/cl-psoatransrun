@@ -5,7 +5,7 @@
 
 (defrule ruleml
     (and (or "RuleML" "Document")
-         (? whitespace)
+         (* (or whitespace comment))
          #\(
          (* (or whitespace comment))
          (? base)
@@ -782,7 +782,7 @@
     (- double)))
 
 (defrule whitespace
-    (+ (or #\Space #\Tab #\Newline))
+    (+ (or #\Space #\Tab #\Newline (and #\Return #\Newline)))
   (:constant nil))
 
 (defrule plus-sign
