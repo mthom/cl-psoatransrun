@@ -36,7 +36,8 @@ eval_loop(Stream) :-
        (  Solutions == [[]] ->
           write_term(Stream, 'Yes\n', [])
        ;
-          member(RVNNames1, Solutions),
+          member(RVNNames0, Solutions),
+          sort(RVNNames0, RVNNames1),
           compile_solution_string(RVNNames1, VarString),
           write_term(Stream, VarString, []),
           write_term(Stream, '\n', []),
