@@ -1,7 +1,8 @@
 
 (in-package #:psoatransrun)
 
-(defparameter *prolog-engine-path* nil)
+(defparameter *prolog-engine-path* "/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog"
+  "The path of the local Scryer Prolog executable. Change this to your local path!")
 
 
 #|
@@ -79,13 +80,15 @@ the Prolog engine and receiving back solutions.
              (setf *prolog-engine-path* (probe-file (pathname (read-line))))
              (psoa-load-and-repl document))))
 
+(defun quit-prolog-engine (process)
+  (signal-process process :quit))
+
 (defun -psoa-load-and-repl (document)
   (multiple-value-bind (prolog-kb-string relationships is-relational-p prefix-ht)
       (psoa-document->prolog document)
     (let ((process (external-program:start *prolog-engine-path* nil
                                            :input :stream
                                            :output :stream)))
-
       (format t "The translated KB:~%~%~A" prolog-kb-string)
 
       ;; Compile the PSOA document in the engine.
@@ -101,12 +104,14 @@ the Prolog engine and receiving back solutions.
       (write-line "/scryer_server.pl')." (process-input-stream process))
       (finish-output (process-input-stream process))
 
-      (let ((*is-relational-p* is-relational-p))
-        ;; It's possible for the runtime to print warning messages (ie.,
-        ;; for singleton variables) in some cases. In those cases, ignore
-        ;; the junk output and try to read the port again.
-        (loop (handler-case
-                  (let* ((port (parse-integer (read-line (process-output-stream process))))
-                         (engine-socket (socket-connect "127.0.0.1" port)))
-                    (psoa-repl engine-socket prefix-ht relationships))
-                (parse-error ())))))))
+      (unwind-protect
+           (let ((*is-relational-p* is-relational-p))
+             ;; It's possible for the runtime to print warning messages (ie.,
+             ;; for singleton variables) in some cases. In those cases, ignore
+             ;; the junk output and try to read the port again.
+             (loop (handler-case
+                       (let* ((port (parse-integer (read-line (process-output-stream process))))
+                              (engine-socket (socket-connect "127.0.0.1" port)))
+                         (psoa-repl engine-socket prefix-ht relationships))
+                     (parse-error ()))))
+        (quit-prolog-engine process)))))
