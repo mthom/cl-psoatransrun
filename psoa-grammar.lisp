@@ -113,7 +113,7 @@
 
 (defrule forall-clause
     (and "Forall"
-         (+ (or var whitespace))
+         (+ (or whitespace comment var))
          #\(
          (* (or whitespace comment))
          clause
@@ -130,7 +130,11 @@
     (or implies head))
 
 (defrule implies
-    (and head (* (or whitespace comment)) ":-" (* (or whitespace comment)) formula)
+    (and head
+         (* (or whitespace comment))
+         ":-"
+         (* (or whitespace comment))
+         formula)
   (:destructure (head ws1 implies ws2 formula &bounds start)
     (declare (ignore ws1 implies ws2))
     (make-ruleml-implies :conclusion head
@@ -252,7 +256,11 @@
     (make-ruleml-equal :left left :right right :position start)))
 
 (defrule subclass
-    (and term (* (or whitespace comment)) "##" (* (or whitespace comment)) term)
+    (and term
+         (* (or whitespace comment))
+         "##"
+         (* (or whitespace comment))
+         term)
   (:destructure (subclass ws1 subclass-rel ws2 superclass &bounds start)
     (declare (ignore ws1 subclass-rel ws2))
     (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))
@@ -261,7 +269,7 @@
     (or atom expr))
 
 (defrule atom-oidful
-    (and subterm
+    (and (or expr subterm)
          #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
@@ -514,7 +522,7 @@
 
 (defrule iri-ref-char
     (not (or #\< #\> #\" #\{ #\} #\| #\^ #\` #\\
-             (character-ranges #\u0000 #\u0020))))
+             (character-ranges (#\u0000 #\u0020)))))
 
 (defrule pn-local
     (and (or pn-chars-u
@@ -528,25 +536,25 @@
         minus-sign
         digit
         #\u00b7
-        (character-ranges #\u0300 #\u036f)
-        (character-ranges #\u203f #\u2040)))
+        (character-ranges (#\u0300 #\u036f))
+        (character-ranges (#\u203f #\u2040))))
 
 (defrule pn-chars-u
     (or pn-chars-base #\_))
 
 (defrule pn-chars-base
     (or alpha
-        (character-ranges #\u00C0 #\u00D6)
-        (character-ranges #\u00d8 #\u00f6)
-        (character-ranges #\u00f8 #\u02ff)
-        (character-ranges #\u0370 #\u037d)
-        (character-ranges #\u037f #\u1fff)
-        (character-ranges #\u200c #\u200d)
-        (character-ranges #\u2070 #\u218f)
-        (character-ranges #\u2c00 #\u2fef)
-        (character-ranges #\u3001 #\ud7ff)
-        (character-ranges #\uf900 #\ufdcf)
-        (character-ranges #\ufdf0 #\ufffd)))
+        (character-ranges (#\u00C0 #\u00D6))
+        (character-ranges (#\u00d8 #\u00f6))
+        (character-ranges (#\u00f8 #\u02ff))
+        (character-ranges (#\u0370 #\u037d))
+        (character-ranges (#\u037f #\u1fff))
+        (character-ranges (#\u200c #\u200d))
+        (character-ranges (#\u2070 #\u218f))
+        (character-ranges (#\u2c00 #\u2fef))
+        (character-ranges (#\u3001 #\ud7ff))
+        (character-ranges (#\uf900 #\ufdcf))
+        (character-ranges (#\ufdf0 #\ufffd))))
 
 (defrule plx
     (or percent pn-local-esc))
@@ -557,13 +565,14 @@
 
 (defrule hex
     (or digit
-        (character-ranges #\a #\f)
-        (character-ranges #\A #\F)))
+        (character-ranges (#\a #\f))
+        (character-ranges (#\A #\F))))
 
 (defrule pn-local-esc
     (and #\\
          (or #\_ #\~ #\. #\! #\$ #\& #\* #\,
-             #\; #\= #\: #\/ #\? #\( #\) #\# plus-sign minus-sign
+             #\; #\= #\: #\/ #\? #\( #\) #\#
+             plus-sign minus-sign
              #\@ #\%))
   (:text t))
 
@@ -609,115 +618,115 @@
     (or alpha digit #\. minus-sign #\_ combining-char extender))
 
 (defrule combining-char
-    (or (character-ranges #\combining_grave_accent
-                          #\combining_greek_ypogegrammeni)
-        (character-ranges #\combining_double_tilde
-                          #\combining_double_inverted_breve)
-        (character-ranges #\combining_cyrillic_titlo
-                          #\combining_cyrillic_psili_pneumata)
-        (character-ranges #\hebrew_accent_etnahta #\hebrew_accent_pazer)
-        (character-ranges #\hebrew_accent_munah #\hebrew_point_holam)
-        (character-ranges #\hebrew_point_qubuts #\hebrew_point_meteg)
+    (or (character-ranges (#\combining_grave_accent
+                           #\combining_greek_ypogegrammeni))
+        (character-ranges (#\combining_double_tilde
+                           #\combining_double_inverted_breve))
+        (character-ranges (#\combining_cyrillic_titlo
+                           #\combining_cyrillic_psili_pneumata))
+        (character-ranges (#\hebrew_accent_etnahta #\hebrew_accent_pazer))
+        (character-ranges (#\hebrew_accent_munah #\hebrew_point_holam))
+        (character-ranges (#\hebrew_point_qubuts #\hebrew_point_meteg))
         #\hebrew_point_rafe
-        (character-ranges #\hebrew_point_shin_dot #\hebrew_point_sin_dot)
+        (character-ranges (#\hebrew_point_shin_dot #\hebrew_point_sin_dot))
         #\hebrew_mark_upper_dot
-        (character-ranges #\arabic_fathatan #\arabic_sukun)
+        (character-ranges (#\arabic_fathatan #\arabic_sukun))
         #\arabic_letter_superscript_alef
         (character-ranges
-         #\arabic_small_high_ligature_sad_with_lam_with_alef_maksura
-         #\arabic_small_high_seen)
-        (character-ranges #\arabic_end_of_ayah #\arabic_small_high_rounded_zero)
-        (character-ranges #\arabic_small_high_upright_rectangular_zero
-                          #\arabic_small_high_madda)
-        (character-ranges #\arabic_small_high_yeh #\arabic_small_high_noon)
-        (character-ranges #\arabic_empty_centre_low_stop #\arabic_small_low_meem)
-        (character-ranges #\devanagari_sign_candrabindu #\devanagari_sign_visarga)
+         (#\arabic_small_high_ligature_sad_with_lam_with_alef_maksura
+          #\arabic_small_high_seen))
+        (character-ranges (#\arabic_end_of_ayah #\arabic_small_high_rounded_zero))
+        (character-ranges (#\arabic_small_high_upright_rectangular_zero
+                           #\arabic_small_high_madda))
+        (character-ranges (#\arabic_small_high_yeh #\arabic_small_high_noon))
+        (character-ranges (#\arabic_empty_centre_low_stop #\arabic_small_low_meem))
+        (character-ranges (#\devanagari_sign_candrabindu #\devanagari_sign_visarga))
         #\devanagari_sign_nukta
-        (character-ranges #\devanagari_vowel_sign_aa #\devanagari_vowel_sign_au)
+        (character-ranges (#\devanagari_vowel_sign_aa #\devanagari_vowel_sign_au))
         #\devanagari_sign_virama
-        (character-ranges #\devanagari_stress_sign_udatta
-                          #\devanagari_acute_accent)
-        (character-ranges #\devanagari_vowel_sign_vocalic_l
-                          #\devanagari_vowel_sign_vocalic_ll)
-        (character-ranges #\bengali_sign_candrabindu #\bengali_sign_visarga)
+        (character-ranges (#\devanagari_stress_sign_udatta
+                           #\devanagari_acute_accent))
+        (character-ranges (#\devanagari_vowel_sign_vocalic_l
+                           #\devanagari_vowel_sign_vocalic_ll))
+        (character-ranges (#\bengali_sign_candrabindu #\bengali_sign_visarga))
         #\bengali_sign_nukta #\bengali_vowel_sign_aa #\bengali_vowel_sign_i
-        (character-ranges #\bengali_vowel_sign_ii #\bengali_vowel_sign_vocalic_rr)
-        (character-ranges #\bengali_vowel_sign_e #\bengali_vowel_sign_ai)
-        (character-ranges #\bengali_vowel_sign_o #\bengali_sign_virama)
+        (character-ranges (#\bengali_vowel_sign_ii #\bengali_vowel_sign_vocalic_rr))
+        (character-ranges (#\bengali_vowel_sign_e #\bengali_vowel_sign_ai))
+        (character-ranges (#\bengali_vowel_sign_o #\bengali_sign_virama))
         #\bengali_au_length_mark
-        (character-ranges #\bengali_vowel_sign_vocalic_l
-                          #\bengali_vowel_sign_vocalic_ll)
+        (character-ranges (#\bengali_vowel_sign_vocalic_l
+                           #\bengali_vowel_sign_vocalic_ll))
         #\gurmukhi_sign_bindi #\gurmukhi_sign_nukta #\gurmukhi_vowel_sign_aa
         #\gurmukhi_vowel_sign_i
-        (character-ranges #\gurmukhi_vowel_sign_ii #\gurmukhi_vowel_sign_uu)
-        (character-ranges #\gurmukhi_vowel_sign_ee #\gurmukhi_vowel_sign_ai)
-        (character-ranges #\gurmukhi_vowel_sign_oo #\gurmukhi_sign_virama)
-        (character-ranges #\gurmukhi_tippi #\gurmukhi_addak)
-        (character-ranges #\gujarati_sign_candrabindu #\gujarati_sign_visarga)
+        (character-ranges (#\gurmukhi_vowel_sign_ii #\gurmukhi_vowel_sign_uu))
+        (character-ranges (#\gurmukhi_vowel_sign_ee #\gurmukhi_vowel_sign_ai))
+        (character-ranges (#\gurmukhi_vowel_sign_oo #\gurmukhi_sign_virama))
+        (character-ranges (#\gurmukhi_tippi #\gurmukhi_addak))
+        (character-ranges (#\gujarati_sign_candrabindu #\gujarati_sign_visarga))
         #\gujarati_sign_nukta
-        (character-ranges #\gujarati_vowel_sign_aa #\gujarati_vowel_sign_candra_e)
-        (character-ranges #\gujarati_vowel_sign_e #\gujarati_vowel_sign_candra_o)
-        (character-ranges #\gujarati_vowel_sign_o #\gujarati_sign_virama)
-        (character-ranges #\oriya_sign_candrabindu #\oriya_sign_visarga)
+        (character-ranges (#\gujarati_vowel_sign_aa #\gujarati_vowel_sign_candra_e))
+        (character-ranges (#\gujarati_vowel_sign_e #\gujarati_vowel_sign_candra_o))
+        (character-ranges (#\gujarati_vowel_sign_o #\gujarati_sign_virama))
+        (character-ranges (#\oriya_sign_candrabindu #\oriya_sign_visarga))
         #\oriya_sign_nukta
-        (character-ranges #\oriya_vowel_sign_aa #\oriya_vowel_sign_vocalic_r)
-        (character-ranges #\oriya_vowel_sign_e #\oriya_vowel_sign_ai)
-        (character-ranges #\oriya_vowel_sign_o #\oriya_sign_virama)
-        (character-ranges #\oriya_ai_length_mark #\oriya_au_length_mark)
-        (character-ranges #\tamil_sign_anusvara #\tamil_sign_visarga)
-        (character-ranges #\tamil_vowel_sign_aa #\tamil_vowel_sign_uu)
-        (character-ranges #\tamil_vowel_sign_e #\tamil_vowel_sign_ai)
-        (character-ranges #\tamil_vowel_sign_o #\tamil_sign_virama)
+        (character-ranges (#\oriya_vowel_sign_aa #\oriya_vowel_sign_vocalic_r))
+        (character-ranges (#\oriya_vowel_sign_e #\oriya_vowel_sign_ai))
+        (character-ranges (#\oriya_vowel_sign_o #\oriya_sign_virama))
+        (character-ranges (#\oriya_ai_length_mark #\oriya_au_length_mark))
+        (character-ranges (#\tamil_sign_anusvara #\tamil_sign_visarga))
+        (character-ranges (#\tamil_vowel_sign_aa #\tamil_vowel_sign_uu))
+        (character-ranges (#\tamil_vowel_sign_e #\tamil_vowel_sign_ai))
+        (character-ranges (#\tamil_vowel_sign_o #\tamil_sign_virama))
         #\tamil_au_length_mark
-        (character-ranges #\telugu_sign_candrabindu #\telugu_sign_visarga)
-        (character-ranges #\telugu_vowel_sign_aa #\telugu_vowel_sign_vocalic_rr)
-        (character-ranges #\telugu_vowel_sign_e #\telugu_vowel_sign_ai)
-        (character-ranges #\telugu_vowel_sign_o #\telugu_sign_virama)
-        (character-ranges #\telugu_length_mark #\telugu_ai_length_mark)
-        (character-ranges #\kannada_sign_anusvara #\kannada_sign_visarga)
-        (character-ranges #\kannada_vowel_sign_aa #\kannada_vowel_sign_vocalic_rr)
-        (character-ranges #\kannada_vowel_sign_e #\kannada_vowel_sign_ai)
-        (character-ranges #\kannada_vowel_sign_o #\kannada_sign_virama)
-        (character-ranges #\kannada_length_mark #\kannada_ai_length_mark)
-        (character-ranges #\malayalam_sign_anusvara #\malayalam_sign_visarga)
-        (character-ranges #\malayalam_vowel_sign_aa
-                          #\malayalam_vowel_sign_vocalic_r)
-        (character-ranges #\malayalam_vowel_sign_e #\malayalam_vowel_sign_ai)
-        (character-ranges #\malayalam_vowel_sign_o #\malayalam_sign_virama)
+        (character-ranges (#\telugu_sign_candrabindu #\telugu_sign_visarga))
+        (character-ranges (#\telugu_vowel_sign_aa #\telugu_vowel_sign_vocalic_rr))
+        (character-ranges (#\telugu_vowel_sign_e #\telugu_vowel_sign_ai))
+        (character-ranges (#\telugu_vowel_sign_o #\telugu_sign_virama))
+        (character-ranges (#\telugu_length_mark #\telugu_ai_length_mark))
+        (character-ranges (#\kannada_sign_anusvara #\kannada_sign_visarga))
+        (character-ranges (#\kannada_vowel_sign_aa #\kannada_vowel_sign_vocalic_rr))
+        (character-ranges (#\kannada_vowel_sign_e #\kannada_vowel_sign_ai))
+        (character-ranges (#\kannada_vowel_sign_o #\kannada_sign_virama))
+        (character-ranges (#\kannada_length_mark #\kannada_ai_length_mark))
+        (character-ranges (#\malayalam_sign_anusvara #\malayalam_sign_visarga))
+        (character-ranges (#\malayalam_vowel_sign_aa
+                           #\malayalam_vowel_sign_vocalic_r))
+        (character-ranges (#\malayalam_vowel_sign_e #\malayalam_vowel_sign_ai))
+        (character-ranges (#\malayalam_vowel_sign_o #\malayalam_sign_virama))
         #\malayalam_au_length_mark #\thai_character_mai_han-akat
-        (character-ranges #\thai_character_sara_i #\thai_character_phinthu)
-        (character-ranges #\thai_character_maitaikhu #\thai_character_yamakkan)
+        (character-ranges (#\thai_character_sara_i #\thai_character_phinthu))
+        (character-ranges (#\thai_character_maitaikhu #\thai_character_yamakkan))
         #\lao_vowel_sign_mai_kan
-        (character-ranges #\lao_vowel_sign_i #\lao_vowel_sign_uu)
-        (character-ranges #\lao_vowel_sign_mai_kon #\lao_semivowel_sign_lo)
-        (character-ranges #\lao_tone_mai_ek #\lao_niggahita)
-        (character-ranges #\tibetan_astrological_sign_-khyud_pa
-                          #\tibetan_astrological_sign_sdong_tshugs)
+        (character-ranges (#\lao_vowel_sign_i #\lao_vowel_sign_uu))
+        (character-ranges (#\lao_vowel_sign_mai_kon #\lao_semivowel_sign_lo))
+        (character-ranges (#\lao_tone_mai_ek #\lao_niggahita))
+        (character-ranges (#\tibetan_astrological_sign_-khyud_pa
+                           #\tibetan_astrological_sign_sdong_tshugs))
         #\tibetan_mark_ngas_bzung_nyi_zla #\tibetan_mark_ngas_bzung_sgor_rtags
         #\tibetan_mark_tsa_-phru #\tibetan_sign_yar_tshes #\tibetan_sign_mar_tshes
-        (character-ranges #\tibetan_vowel_sign_aa #\tibetan_mark_halanta)
-        (character-ranges #\tibetan_sign_lci_rtags #\tibetan_sign_gru_med_rgyings)
-        (character-ranges #\tibetan_subjoined_letter_ka
-                          #\tibetan_subjoined_letter_ca)
+        (character-ranges (#\tibetan_vowel_sign_aa #\tibetan_mark_halanta))
+        (character-ranges (#\tibetan_sign_lci_rtags #\tibetan_sign_gru_med_rgyings))
+        (character-ranges (#\tibetan_subjoined_letter_ka
+                           #\tibetan_subjoined_letter_ca))
         #\tibetan_subjoined_letter_ja
-        (character-ranges #\tibetan_subjoined_letter_nya
-                          #\tibetan_subjoined_letter_wa)
-        (character-ranges #\tibetan_subjoined_letter_ya
-                          #\tibetan_subjoined_letter_ha)
+        (character-ranges (#\tibetan_subjoined_letter_nya
+                           #\tibetan_subjoined_letter_wa))
+        (character-ranges (#\tibetan_subjoined_letter_ya
+                           #\tibetan_subjoined_letter_ha))
         #\tibetan_subjoined_letter_kssa
-        (character-ranges #\combining_left_harpoon_above
-                          #\combining_four_dots_above)
+        (character-ranges (#\combining_left_harpoon_above
+                           #\combining_four_dots_above))
         #\combining_left_right_arrow_above
-        (character-ranges #\ideographic_level_tone_mark
-                          #\hangul_double_dot_tone_mark)
+        (character-ranges (#\ideographic_level_tone_mark
+                           #\hangul_double_dot_tone_mark))
         #\combining_katakana-hiragana_voiced_sound_mark
         #\combining_katakana-hiragana_semi-voiced_sound_mark))
 
 (defrule extender
     (or #\u00B7 #\u02D0 #\u02D1 #\u0387 #\u0640 #\u0E46 #\u0EC6 #\u3005
-        (character-ranges #\u3031 #\u3035)
-        (character-ranges #\u309D #\u309E)
-        (character-ranges #\u30FC #\u30FE)))
+        (character-ranges (#\u3031 #\u3035))
+        (character-ranges (#\u309D #\u309E))
+        (character-ranges (#\u30FC #\u30FE))))
 
 (defrule numeric-literal
     (or numeric-literal-positive numeric-literal-negative numeric-literal-unsigned))
