@@ -225,6 +225,8 @@
                            (format stream "'_~A'" const)))
                       ((type number)
                        (format stream "~A" const))))
+                   ((ruleml-number :value number)
+                    (format stream "~A" number))
                    ((ruleml-string :contents const)
                     (format stream "\"~A\"" const)))))
         (translate item stream assert-item-p)

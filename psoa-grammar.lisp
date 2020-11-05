@@ -242,7 +242,11 @@
     (or atom-oidful atom-oidless))
 
 (defrule equal
-    (and term (* (or whitespace comment)) #\= (* (or whitespace comment)) term)
+    (and term
+         (* (or whitespace comment))
+         #\=
+         (* (or whitespace comment))
+         term)
   (:destructure (left ws1 equal ws2 right &bounds start)
     (declare (ignore ws1 equal ws2))
     (make-ruleml-equal :left left :right right :position start)))
@@ -470,6 +474,7 @@
     (typecase const
       (ruleml-string const)
       (ruleml-const const)
+      (number (make-ruleml-number :value const :position start))
       (t (make-ruleml-const :contents const :position start)))))
 
 (defrule const-string

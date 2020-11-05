@@ -564,25 +564,66 @@ is objectify_d(\phi, \omega) if \omega is relational.
         (_ (skolemize-head term :positive t))))))
 
 
-(defun flatten-externals (term)
-  (let* ((vars)
-         (term (map-atom-transformer
-                (lambda (atomic-formula &rest args &key &allow-other-keys)
-                  (multiple-value-bind (term new-vars)
-                      (apply #'-flatten-externals atomic-formula args)
-                    (appendf vars new-vars)
-                    term))
-                term)))
-    (match term
-      ((ruleml-forall :vars forall-vars :clause clause)
-       (make-ruleml-forall :vars (append forall-vars vars) :clause clause))
-      (_ (if (null vars)
-             term
-             (make-ruleml-forall :vars vars :clause term))))))
+(defun -flatten-externals (term)
+  (let ((eqs)
+        (external-exprs-ht (make-hash-table :test #'equalp)))
+    (labels ((trim (term)
+               (transform-ast term #'retain))
+             (retain (term &key external &allow-other-keys)
+               (match term
+                 ((ruleml-external :atom atom)
+                  (cond (external atom)
+                        ((ruleml-genvar-p atom) atom)
+                        (t term)))
+                 ((guard (ruleml-expr) external)
+                  (multiple-value-bind (expr-var foundp)
+                      (gethash term external-exprs-ht)
+                    (if foundp
+                        expr-var
+                        (let ((expr-var (fresh-variable)))
+                          (push (make-ruleml-equal
+                                 :left expr-var
+                                 :right (make-ruleml-external :atom term))
+                                eqs)
+                          (sethash term external-exprs-ht expr-var)
+                          expr-var))))
+                 (_ term))))
+      (let ((flattened-term (trim term)))
+        (values (if eqs
+                    (make-ruleml-and :terms (nreverse (cons flattened-term eqs)))
+                    flattened-term)
+                (loop for var being the hash-values of external-exprs-ht
+                      collect var)))))))
 
+(defun flatten-externals (term &optional queryp)
+  (let* ((vars)
+         (term (transform-ast
+                term
+                (lambda (term &key external &allow-other-keys)
+                  (match term
+                    ((guard (or (ruleml-expr) (ruleml-oidful-atom) (ruleml-atom)
+                                (ruleml-subclass-rel) (ruleml-equal))
+                            (not external))
+                     (multiple-value-bind (term new-vars)
+                         (-flatten-externals term)
+                       (if queryp
+                           (make-ruleml-exists :vars new-vars :formula term)
+                           (progn (appendf vars new-vars)
+                                  term))))
+                    (_ term))))))
+  (match term
+    ((ruleml-forall :vars forall-vars :clause clause)
+     (make-ruleml-forall :vars (append forall-vars vars) :clause clause))
+    (_ (if vars
+           (make-ruleml-forall :vars vars :clause term)
+           term)))))
+
+
+#|
 (defun -flatten-externals (atomic-formula &key &allow-other-keys)
-  (let* (vars eqs
-              (exprs (make-hash-table :test #'equalp)))
+  (let* ((vars)
+         (eqs)
+         (exprs (make-hash-table :test #'equalp)))
     (values (transform-ast
              atomic-formula
              (lambda (term &key external &allow-other-keys)
@@ -596,14 +637,16 @@ is objectify_d(\phi, \omega) if \omega is relational.
                                           (when external
                                             (push var vars)
                                             (setf (gethash atom exprs) var)))))))
-                    (cond (external (push (make-ruleml-equal :left expr-var :right term) eqs)
+                    (cond (external (push (make-ruleml-equal :left expr-var
+                                                             :right term)
+                                          eqs)
                                     expr-var)
                           ((null eqs) term)
                           (t (prog1 (make-ruleml-and :terms (nreverse (cons term eqs)))
                                (setf eqs nil))))))
                  (_ term))))
             vars)))
-
+|#
 
 (defun flatten-and (item)
   (match item

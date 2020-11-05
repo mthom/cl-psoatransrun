@@ -136,6 +136,10 @@ standard (written between double quotation marks)."
   oid
   predicate)
 
+(defstruct (ruleml-number (:include ruleml-ast-node))
+  "A number (float or integer)."
+  (value 0 :type number))
+
 (defun transform-ast (term key &key positive negative external
                                  (propagator
                                   (lambda (term &key (positive positive) (negative negative)
@@ -219,7 +223,8 @@ traversed is inside an External(...)."
            (ruleml-import)
            (ruleml-pname-ln)
            (ruleml-const)
-           (ruleml-var))
+           (ruleml-var)
+           (ruleml-number))
        (funcall key term
                 :positive positive
                 :negative negative

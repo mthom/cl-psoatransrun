@@ -74,6 +74,8 @@
            #:ruleml-and-terms
            #:ruleml-or
            #:ruleml-or-terms
+           #:ruleml-number
+           #:ruleml-number-value
            #:ruleml-exists
            #:ruleml-exists-vars
            #:ruleml-exists-formula
@@ -94,6 +96,7 @@
            #:ruleml-assert-p
            #:ruleml-query-p
            #:ruleml-naf-p
+           #:ruleml-number-p
            #:ruleml-genvar-p
            #:ruleml-var-p
            #:ruleml-string-p
@@ -126,6 +129,7 @@
            #:make-ruleml-var
            #:make-ruleml-slot
            #:make-ruleml-tuple
+           #:make-ruleml-number
            #:make-ruleml-pname-ln
            #:make-ruleml-expr
            #:make-ruleml-subclass-rel
@@ -179,4 +183,5 @@
 
 (defpackage #:psoatransrun-tests
   (:use #:cl #:external-program #:pathname-utils #:psoatransrun
-        #:split-sequence #:usocket))
+        #:split-sequence #:usocket)
+  (:export #:run-test-suite))
