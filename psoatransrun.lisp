@@ -44,9 +44,11 @@ the Prolog engine and receiving back solutions.
                  (t
                   ;; The use of subseq is a kludge to remove quotation
                   ;; marks printed by Scryer.
-                  (write-string (subseq solution 1 (1- (length solution))))))
+                  (write-string (subseq solution 1 (1- (length solution))))
+                  (when *all-solutions*
+                    (terpri))))
            (unless *all-solutions*
-             (read-char))))
+               (read-char))))
 
 (defun psoa-repl (engine-socket prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
   (loop (handler-case (-psoa-repl engine-socket prefix-ht relationships)
@@ -113,11 +115,13 @@ the Prolog engine and receiving back solutions.
     (let* ((process (external-program:start *prolog-engine-path* nil
                                             :input :stream
                                             :output :stream)))
+
       (format t "The translated KB:~%~%~A" prolog-kb-string)
       (init-prolog-process prolog-kb-string process)
 
-      (unwind-protect
-           (let ((*is-relational-p* is-relational-p)
-                 (engine-socket (connect-to-prolog-process process)))
-             (psoa-repl engine-socket prefix-ht relationships))
-        (quit-prolog-engine process)))))
+      (let ((engine-socket (connect-to-prolog-process process)))
+        (unwind-protect
+             (let ((*is-relational-p* is-relational-p))
+               (psoa-repl engine-socket prefix-ht relationships))
+          (socket-close engine-socket)
+          (quit-prolog-engine process))))))

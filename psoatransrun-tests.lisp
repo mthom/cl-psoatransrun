@@ -34,7 +34,7 @@
 
 (defun process-answer-string (answer-string)
   (loop for item in (remove-duplicates
-                     (sort (cons "no" (split-sequence #\Newline answer-string)) #'string<)
+                     (sort (cons "no" (split-sequence #\Newline answer-string)) #'string<=)
                      :test #'string=)
         for new-item = (string-trim '(#\Space #\Newline #\Backspace #\Tab
                                       #\Linefeed #\Page #\Return #\Rubout)
@@ -46,8 +46,6 @@
   (let ((expected-answer-lines (process-answer-string expected-answers))
         (reported-answer-lines (process-answer-string reported-answers)))
     (equalp expected-answer-lines reported-answer-lines)))
-
-(defun relative-filename (directory))
 
 (defun run-test-suite ()
   (let ((subdirectories (list-subdirectories *test-suite-directory*)))
@@ -72,32 +70,34 @@
 
                            (let ((engine-socket (connect-to-prolog-process process))
                                  (*all-solutions* t))
-                             (loop for n upfrom 1
-                                   for query-file-pathname = (query-pathname subdirectory n)
-                                   for answer-file-pathname = (answer-pathname subdirectory n)
-                                   if (probe-file query-file-pathname) do
-                                     (let ((query-string (file-get-contents query-file-pathname))
-                                           (answer-batch (file-get-contents answer-file-pathname)))
-                                       (handler-case
-                                           (unless
-                                               (answers-match-p
-                                                answer-batch
-                                                (let ((*standard-output* (make-string-output-stream)))
-                                                  (send-query-to-prolog-engine
-                                                   (socket-stream engine-socket)
-                                                   query-string
-                                                   prefix-ht
-                                                   relationships)
-                                                  (get-output-stream-string *standard-output*)))
-                                             (format t "Query ~D of ~A failed!~%"
-                                                     n (file-namestring test-kb-filename)))
-                                         (esrap:esrap-parse-error ()
-                                           (format t "Parse error in query file ~A~%"
-                                                   (file-namestring query-file-pathname)))))
-                                   else do
-                                     (format t "Finished testing ~A~%~%"
-                                             (file-namestring test-kb-filename))
-                                     (throw 'continue nil)))))
+                             (unwind-protect
+                                  (loop for n upfrom 1
+                                        for query-file-pathname = (query-pathname subdirectory n)
+                                        for answer-file-pathname = (answer-pathname subdirectory n)
+                                        if (probe-file query-file-pathname) do
+                                          (let ((query-string (file-get-contents query-file-pathname))
+                                                (answer-batch (file-get-contents answer-file-pathname)))
+                                            (handler-case
+                                                (unless
+                                                    (answers-match-p
+                                                     answer-batch
+                                                     (let ((*standard-output* (make-string-output-stream)))
+                                                       (send-query-to-prolog-engine
+                                                        (socket-stream engine-socket)
+                                                        query-string
+                                                        prefix-ht
+                                                        relationships)
+                                                       (get-output-stream-string *standard-output*)))
+                                                  (format t "Query ~D of ~A failed!~%"
+                                                          n (file-namestring test-kb-filename)))
+                                              (esrap:esrap-parse-error ()
+                                                (format t "Parse error in query file ~A~%"
+                                                        (file-namestring query-file-pathname)))))
+                                        else do
+                                          (format t "Finished testing ~A~%~%"
+                                                  (file-namestring test-kb-filename))
+                                          (throw 'continue nil))
+                               (socket-close engine-socket)))))
 
                      (esrap:esrap-parse-error ()
                        (format t "Parse error in KB file ~A~%~%"
