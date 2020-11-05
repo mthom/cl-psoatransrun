@@ -23,7 +23,8 @@
   (let* ((stream (make-string-input-stream prolog-kb-string))
          (lines (loop for line = (read-line stream nil)
                       for pred-ind in predicate-indicators
-                      while line collect (cons line pred-ind))))
+                      if (and line pred-ind)
+                        collect (cons line pred-ind))))
     (remove-duplicates
      (mapcar #'car
              (sort lines (lambda (p1 p2)
@@ -45,6 +46,7 @@
                                                       :test #'equalp)))
                  (format collated-stream ":- use_module(library(tabling)).~%~%")
                  (loop for key being each hash-key of predicate-indicators
+                       if (and (car key) (cdr key))
                        do (format collated-stream ":- table ~A/~A.~%"
                                   (car key) (cdr key)))
                  (format collated-stream "~%")

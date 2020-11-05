@@ -257,7 +257,7 @@
     (or atom expr))
 
 (defrule atom-oidful
-    (and term
+    (and subterm
          #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)

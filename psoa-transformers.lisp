@@ -405,7 +405,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
     ("round" "round")
     ("floor" "floor")
     ("ceiling" "ceiling")
-    ("power" "power")
+    ("power" "'**'")
     ("sin" "sin")
     ("cos" "cos")
     ("atan" "atan")
@@ -524,31 +524,44 @@ is objectify_d(\phi, \omega) if \omega is relational.
     (labels ((skolem-term ()
                (if (null forall-vars)
                    (fresh-skolem-constant)
-                   (make-ruleml-atom :root (fresh-skolem-constant)
-                                     :descriptors (list (make-ruleml-tuple :dep t
-                                                                           :terms forall-vars)))))
+                   (make-ruleml-expr :root (fresh-skolem-constant)
+                                     :terms (list (make-ruleml-tuple :dep t
+                                                                     :terms forall-vars)))))
              (skolemize-head (term &key positive negative &allow-other-keys)
                (match term
+                 ((ruleml-implies :conclusion conclusion :condition condition :position pos)
+                  (make-ruleml-implies :conclusion (skolemize-head conclusion :positive t)
+                                       :condition condition
+                                       :position pos))
+                 ((ruleml-and :terms terms)
+                  (make-ruleml-and
+                   :terms (mapcar #`(skolemize-head % :positive positive :negative negative)
+                                  terms)))
                  ((guard (ruleml-exists :vars vars :formula formula)
                          (or positive (not negative))) ;; the exists is in a conclusion or fact.
-                  (let ((vars (alist->ht (mapcar #`(cons (ruleml-var-name %) (skolem-term)) vars)
+                  (let ((vars (alist->ht (mapcar #`(cons (ruleml-var-name %)
+                                                         (skolem-term))
+                                                 vars)
                                          :test #'equalp)))
-                    (transform-ast formula
-                                   (lambda (term &key &allow-other-keys)
-                                     (if (ruleml-var-p term)
-                                         (multiple-value-bind (skolem-term foundp)
-                                             (gethash (ruleml-var-name term) vars)
-                                           (if foundp
-                                               skolem-term
-                                               term))
-                                         term)))))
+                    (transform-ast
+                     (transform-ast formula
+                                    (lambda (term &key &allow-other-keys)
+                                      (if (ruleml-var-p term)
+                                          (multiple-value-bind (skolem-term foundp)
+                                              (gethash (ruleml-var-name term) vars)
+                                            (if foundp
+                                                skolem-term
+                                                term))
+                                          term)))
+                     #'skolemize-head
+                     :positive positive
+                     :negative negative)))
                  (_ term))))
       (match term
         ((ruleml-forall :vars vars :clause clause)
          (setf forall-vars (remove-if #'ruleml-genvar-p vars))
-         (make-ruleml-forall :vars vars
-                             :clause (transform-ast clause #'skolemize-head)))
-        (_ (transform-ast term #'skolemize-head))))))
+         (make-ruleml-forall :vars vars :clause (skolemize-head clause :positive t)))
+        (_ (skolemize-head term :positive t))))))
 
 
 (defun flatten-externals (term)
@@ -624,10 +637,10 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 (defun separate-existential-variables (term)
   (transform-ast term
-                 (lambda (term &key positive negative &allow-other-keys)
+                 (lambda (term &key negative &allow-other-keys)
                    (match term
                      ((ruleml-exists :vars vars :formula formula)
-                      (if (and (not positive) negative) ;; We are in a condition.
+                      (if negative ;; We are in a condition or query.
                           (let ((renamed-evs (make-hash-table :test #'equalp)) ;; Hash table of renamed existential variables assigned to renamed-evs.
 				)
                             (dolist (var vars)
