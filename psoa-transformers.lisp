@@ -385,7 +385,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
     ("integer" "integer")
     ("float" "float")
     ("number" "number")
-    ("eq" "'=='")
+    ("eq" "'=:='")
     ("not_eq" "=\\=")
     ("greater_than" "'>'")
     ("greater_than_or_eq" "'>='")
@@ -593,7 +593,7 @@ is objectify_d(\phi, \omega) if \omega is relational.
                     (make-ruleml-and :terms (nreverse (cons flattened-term eqs)))
                     flattened-term)
                 (loop for var being the hash-values of external-exprs-ht
-                      collect var)))))))
+                      collect var))))))
 
 (defun flatten-externals (term &optional queryp)
   (let* ((vars)
@@ -617,36 +617,6 @@ is objectify_d(\phi, \omega) if \omega is relational.
     (_ (if vars
            (make-ruleml-forall :vars vars :clause term)
            term)))))
-
-
-#|
-(defun -flatten-externals (atomic-formula &key &allow-other-keys)
-  (let* ((vars)
-         (eqs)
-         (exprs (make-hash-table :test #'equalp)))
-    (values (transform-ast
-             atomic-formula
-             (lambda (term &key external &allow-other-keys)
-               (match term
-                 ((ruleml-external :atom atom)
-                  (let ((expr-var (multiple-value-bind (var foundp)
-                                      (gethash atom exprs)
-                                    (if foundp
-                                        var
-                                        (let ((var (fresh-variable)))
-                                          (when external
-                                            (push var vars)
-                                            (setf (gethash atom exprs) var)))))))
-                    (cond (external (push (make-ruleml-equal :left expr-var
-                                                             :right term)
-                                          eqs)
-                                    expr-var)
-                          ((null eqs) term)
-                          (t (prog1 (make-ruleml-and :terms (nreverse (cons term eqs)))
-                               (setf eqs nil))))))
-                 (_ term))))
-            vars)))
-|#
 
 (defun flatten-and (item)
   (match item
@@ -730,9 +700,9 @@ is objectify_d(\phi, \omega) if \omega is relational.
                         (make-ruleml-assert
                          :items (mapcan #`(-> (objectify % relationships prefix-ht)
                                               skolemize
+                                              flatten-externals
                                               separate-existential-variables
                                               describute
-                                              flatten-externals
                                               split-conjuctive-conclusion)
                                         first-stage-items)
                          :relationships relationships
@@ -749,5 +719,6 @@ is objectify_d(\phi, \omega) if \omega is relational.
       embedded-objectify
       unnest
       (objectify relationships prefix-ht)
+      (flatten-externals t)
       separate-existential-variables
       describute))

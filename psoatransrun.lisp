@@ -60,6 +60,7 @@ the Prolog engine and receiving back solutions.
 (defun send-query-to-prolog-engine (socket-stream query-string prefix-ht relationships)
   (multiple-value-bind (query-string toplevel-var-string)
       (psoa-query->prolog query-string prefix-ht relationships)
+    (format t "~A" query-string)
     (write-line query-string socket-stream)
     (write-line toplevel-var-string socket-stream)
     (force-output socket-stream)
