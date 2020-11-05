@@ -236,3 +236,8 @@
   (write (ruleml-membership-predicate membership) :stream stream))
 
 (set-pprint-dispatch 'ruleml-membership 'pprint-ruleml-membership)
+
+(defun pprint-ruleml-number (stream number)
+  (write (ruleml-number-value number) :stream stream))
+
+(set-pprint-dispatch 'ruleml-number 'pprint-ruleml-number)
