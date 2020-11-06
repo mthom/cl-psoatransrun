@@ -50,7 +50,9 @@
 (set-pprint-dispatch 'ruleml-const 'pprint-ruleml-const)
 
 (defun pprint-ruleml-string (stream string)
-  (write (ruleml-string-contents string) :stream stream))
+  (write-char #\" stream)
+  (write (ruleml-string-contents string) :stream stream)
+  (write-char #\" stream))
 
 (set-pprint-dispatch 'ruleml-string 'pprint-ruleml-string)
 
@@ -144,9 +146,7 @@
 
 (defun pprint-ruleml-equal (stream equal)
   (write (ruleml-equal-left equal) :stream stream)
-  (write-char #\Space stream)
   (write-char #\= stream)
-  (write-char #\Space stream)
   (write (ruleml-equal-right equal) :stream stream))
 
 (set-pprint-dispatch 'ruleml-equal 'pprint-ruleml-equal)

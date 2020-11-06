@@ -185,3 +185,6 @@
   (:use #:cl #:external-program #:pathname-utils #:psoatransrun
         #:split-sequence #:usocket)
   (:export #:run-test-suite))
+
+(defpackage #:prolog-grammar
+  (:use #:cl #:esrap #:psoa-ast))

@@ -508,7 +508,7 @@
 ;; Lexical analysis.
 
 (defrule unicode-string
-    (and #\" (* (not (or #\" #\\ eol echar))) #\")
+    (and #\" (* (or echar (not (or #\" #\\ eol)))) #\")
   (:destructure (dbl-quote0 chars dbl-quote1 &bounds start)
     (declare (ignore dbl-quote0 dbl-quote1))
     (make-ruleml-string :contents (concatenate 'string chars)
@@ -583,8 +583,10 @@
     (digit-char-p character))
 
 (defrule echar
-    (and #\\ (or #\t #\b #\n #\r #\f #\\ #\" #\'))
-  (:text t))
+    (and #\\ (character-ranges #\t #\b #\n #\r #\f #\\ #\" #\'))
+  (:destructure (backslash char)
+    (declare (ignore backslash))
+    char))
 
 (defrule eol
     (or #\newline #\return))

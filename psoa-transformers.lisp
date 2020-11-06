@@ -719,6 +719,6 @@ is objectify_d(\phi, \omega) if \omega is relational.
       embedded-objectify
       unnest
       (objectify relationships prefix-ht)
-      (flatten-externals t)
+      (flatten-externals t) ;; We are transforming a query, so the queryp optional argument is true.
       separate-existential-variables
       describute))

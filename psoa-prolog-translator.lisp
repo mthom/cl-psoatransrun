@@ -52,9 +52,17 @@
                  (format collated-stream "~%")
                  (dolist (line lines)
                    (format collated-stream "~A~%" line))
-                   (values (get-output-stream-string collated-stream)
-                           relationships
-                           is-relational-p))))))
+                 (values (get-output-stream-string collated-stream)
+                         relationships
+                         is-relational-p)))
+      (:xsb (let ((collated-stream (make-string-output-stream))
+                  (lines (sort-kb prolog-kb-string predicate-indicators)))
+              (format collated-stream ":- auto_table.~%~%")
+              (dolist (line lines)
+                (format collated-stream "~A~%" line))
+              (values (get-output-stream-string collated-stream)
+                      relationships
+                      is-relational-p))))))
 
 (defun translate-document- (document)
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
