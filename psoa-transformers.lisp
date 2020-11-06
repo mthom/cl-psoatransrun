@@ -676,6 +676,14 @@ is objectify_d(\phi, \omega) if \omega is relational.
 
 
 (defun transform-document (document)
+  "transform-document consumes a document (an instance of
+ruleml-document) and transforms it according to the
+transformation/normalization steps described in this package, defined
+in PSOATransRun papers and in Gen Zou's PhD thesis.
+
+The return value is another ruleml-document instance containing the
+transformed KB in addition to newly created relationships and
+prefix-ht hash tables."
   (with ((prefix-ht (alist->ht (loop for prefix in (ruleml-document-prefixes document)
                                      collect (cons (ruleml-prefix-name prefix)
                                                    (ruleml-prefix-iri-ref prefix)))

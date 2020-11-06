@@ -35,7 +35,12 @@
                    :key #'cdr))
      :test #'equal)))
 
+
 (defun translate-document (document &key (system :scryer))
+  "translate-document converts a document (a RuleML AST of type
+ruleml-document) to a string representing the equivalent Prolog
+KB. The 'system' argument is used to accommodate different declarative
+requirements across Prolog systems."
   (multiple-value-bind (prolog-kb-string relationships
                         is-relational-p predicate-indicators)
       (translate-document- document)

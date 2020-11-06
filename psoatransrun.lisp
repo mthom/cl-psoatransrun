@@ -1,7 +1,7 @@
 
 (in-package #:psoatransrun)
 
-(defparameter *prolog-engine-path* "/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog"
+(defparameter *prolog-engine-path* "/home/mark/scryer-prolog/target/release/scryer-prolog"
   "The path of the local Scryer Prolog executable. Change this to your local path!")
 
 ;;(defparameter *prolog-engine-path* "/home/mark/XSB/bin/xsb"
@@ -22,8 +22,11 @@ to equivalent Prolog, and for sending those translations to
 the Prolog engine and receiving back solutions.
 |#
 
-(defun psoa-document->prolog (document &key system)
+(defun psoa-document->prolog (document &key system) ;; document is a string.
+  (check-type document string)
   (let ((document (transform-document (parse 'psoa-grammar::ruleml document))))
+    ;; document is now of type ruleml-document.
+    (check-type document ruleml-document)
     (multiple-value-bind (prolog-kb-string relationships is-relational-p)
         (translate-document document :system system)
       (values prolog-kb-string
@@ -49,6 +52,9 @@ the Prolog engine and receiving back solutions.
                   ;; ;; The use of subseq is a kludge to remove quotation
                   ;; ;; marks printed by Scryer.
                   ;;(write-string (subseq solution 1 (1- (length solution))))
+		  
+		  ;; The PSOA RuleML AST pretty printer defined in psoa-pprint.lisp
+		  ;; is implicitly invoked here by format.
                   (format t "~{~A~^ ~}" (parse 'prolog-grammar::goal-sequence
                                                (subseq solution 1 (1- (length solution)))))
                   (when *all-solutions*
@@ -103,7 +109,7 @@ the Prolog engine and receiving back solutions.
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
     (write-string "consult('" process-input-stream)
-    (write-string "/home/mark/Projects/CL/PSOATransRun/" process-input-stream)
+    (write-string "/home/mark/cl-psoatransrun/" process-input-stream)
     (write-string (cdr (assoc system system-servers)) process-input-stream)
     (write-line   "')." process-input-stream)
     (finish-output process-input-stream)))
