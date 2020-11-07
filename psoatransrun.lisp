@@ -46,7 +46,8 @@ the Prolog engine and receiving back solutions.
                   (return-from read-and-print-solutions))
                  ((string= solution "Yes")
                   (format t "~%yes~%")
-                  (read-line (in-socket-stream engine-socket) nil nil) ;; Ignore following 'No'.
+                  ;; Ignore following 'No'.
+                  (read-line (in-socket-stream engine-socket) nil nil)
                   (return-from read-and-print-solutions))
                  (t
 		          ;; The PSOA RuleML AST pretty printer defined in psoa-pprint.lisp
@@ -82,17 +83,23 @@ the Prolog engine and receiving back solutions.
     (read-and-print-solutions engine-socket)))
 
 (defun quit-prolog-engine (process)
-  (signal-process process :quit))
+  (write-line "end_of_file." (sb-ext:process-input process))
+  (write-line "halt." (sb-ext:process-input process))
+  (finish-output (sb-ext:process-input process))
+  (close (sb-ext:process-input process) :abort t)
+  (close (sb-ext:process-output process) :abort t)
+  (sb-ext:process-wait process)
+  (sb-ext:process-close process))
 
 (defun init-prolog-process (prolog-kb-string process &key system)
-  (let ((process-input-stream (process-input-stream process))
+  (let ((process-input-stream (sb-ext:process-input process))
         (system-servers '((:scryer . "scryer_server.pl")
                           (:xsb . "xsb_server.pl"))))
     ;; Compile the PSOA document in the engine.
     (write-line "[user]." process-input-stream)
     (write-line prolog-kb-string process-input-stream)
     (write-line "end_of_file." process-input-stream)
-    (finish-output process-input-stream)
+    (force-output process-input-stream)
 
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
@@ -100,18 +107,24 @@ the Prolog engine and receiving back solutions.
     (write-string "/home/mark/Projects/CL/PSOATransRun/" process-input-stream)
     (write-string (cdr (assoc system system-servers)) process-input-stream)
     (write-line   "')." process-input-stream)
-    (finish-output process-input-stream)))
+    (force-output process-input-stream)))
 
 (defun connect-to-prolog-process (engine-client process)
   ;; It's possible for the runtime to print warning messages (ie.,
   ;; for singleton variables) in some cases. In those cases, ignore
   ;; the junk output and try to read the port again.
   (loop (handler-case
-            (let* ((port (parse-integer (read-line (process-output-stream process)))))
+            (let* ((port (parse-integer (read-line (sb-ext:process-output process)))))
               (return-from connect-to-prolog-process
-                (connect-to-prolog engine-client :port port)))
+                (open-socket-to-prolog engine-client :port port)))
           (parse-error ()))))
 
+(defun start-prolog-process (engine-client)
+  (sb-ext:run-program (prolog-engine-client-path engine-client)
+                      '()
+                      :input :stream
+                      :output :stream
+                      :wait nil))
 
 (defun psoa-load-and-repl (document &key (system :scryer))
   (let ((engine-client (make-engine-client system)))
@@ -126,10 +139,7 @@ the Prolog engine and receiving back solutions.
 (defun -psoa-load-and-repl (document engine-client)
   (multiple-value-bind (prolog-kb-string relationships is-relational-p prefix-ht)
       (psoa-document->prolog document :system (prolog-engine-client-host engine-client))
-    (let* ((process (external-program:start (prolog-engine-client-path engine-client)
-                                            nil
-                                            :input :stream
-                                            :output :stream)))
+    (let* ((process (start-prolog-process engine-client)))
 
       (format t "The translated KB:~%~%~A" prolog-kb-string)
       (init-prolog-process prolog-kb-string process

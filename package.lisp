@@ -170,15 +170,15 @@
 (defpackage #:prolog-engine-client
   (:use #:cl #:usocket)
   (:export #:close-socket
-           #:connect-to-prolog
            #:make-engine-client
+           #:open-socket-to-prolog
            #:prolog-engine-client-path
            #:prolog-engine-client-host
            #:in-socket-stream
            #:out-socket-stream))
 
 (defpackage #:psoatransrun
-  (:use #:cl #:external-program #:prolog-engine-client #:psoa-ast
+  (:use #:cl #:prolog-engine-client #:psoa-ast
         #:psoa-grammar #:psoa-transformers #:psoa-prolog-translator
         #:rutils #:trivia #:usocket)
   (:export #:*all-solutions*
@@ -189,11 +189,12 @@
            #:psoa-load-and-repl
            #:psoa-query->prolog
            #:quit-prolog-engine
-           #:send-query-to-prolog-engine)
+           #:send-query-to-prolog-engine
+           #:start-prolog-process)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun-tests
-  (:use #:cl #:external-program #:pathname-utils #:prolog-engine-client
+  (:use #:cl #:pathname-utils #:prolog-engine-client
         #:psoatransrun #:split-sequence #:usocket)
   (:export #:run-test-suite))
 

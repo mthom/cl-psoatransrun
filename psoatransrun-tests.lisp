@@ -47,6 +47,39 @@
         (reported-answer-lines (process-answer-string reported-answers)))
     (equalp expected-answer-lines reported-answer-lines)))
 
+(defun run-test-case (test-kb-filename subdirectory engine-client
+                      process prefix-ht relationships)
+  (let ((engine-socket (connect-to-prolog-process engine-client process))
+        (*all-solutions* t))
+    (unwind-protect
+         (loop for n upfrom 1
+               for query-file-pathname = (query-pathname subdirectory n)
+               for answer-file-pathname = (answer-pathname subdirectory n)
+               if (probe-file query-file-pathname) do
+                 (let ((query-string (file-get-contents query-file-pathname))
+                       (answer-batch (file-get-contents answer-file-pathname)))
+                   (handler-case
+                       (unless
+                           (answers-match-p
+                            answer-batch
+                            (let ((*standard-output* (make-string-output-stream)))
+                              (send-query-to-prolog-engine
+                               engine-socket
+                               query-string
+                               prefix-ht
+                               relationships)
+                              (get-output-stream-string *standard-output*)))
+                         (format t "Query ~D of ~A failed!~%"
+                                 n (file-namestring test-kb-filename)))
+                     (esrap:esrap-parse-error ()
+                       (format t "Parse error in query file ~A~%"
+                               (file-namestring query-file-pathname)))))
+               else do
+                 (format t "Finished testing ~A~%~%"
+                         (file-namestring test-kb-filename))
+                 (throw 'continue nil))
+      (close-socket engine-socket))))
+
 (defun run-test-suite (&key (system :scryer))
   (let ((subdirectories (list-subdirectories *test-suite-directory*))
         (engine-client (make-engine-client system)))
@@ -54,56 +87,21 @@
       (let* ((test-kb-filename (kb-pathname subdirectory)))
         (when (probe-file test-kb-filename)
           (format t "Running ~A test suite ...~%" (file-namestring test-kb-filename))
-
           (catch 'continue
-            (let ((process (external-program:start (prolog-engine-client-path engine-client)
-                                                   nil
-                                                   :input :stream
-                                                   :output :stream)))
-              (unwind-protect
-                   (handler-case
-                       (let ((psoa-kb-string (file-get-contents test-kb-filename)))
-                         (multiple-value-bind (prolog-kb-string relationships
-                                               is-relational-p prefix-ht)
-                             (psoa-document->prolog psoa-kb-string :system system)
-
-                           (declare (ignore is-relational-p))
-                           (init-prolog-process prolog-kb-string process :system system)
-
-                           (let ((engine-socket (connect-to-prolog-process engine-client process))
-                                 (*all-solutions* t))
-                             (unwind-protect
-                                  (loop for n upfrom 1
-                                        for query-file-pathname = (query-pathname subdirectory n)
-                                        for answer-file-pathname = (answer-pathname subdirectory n)
-                                        if (probe-file query-file-pathname) do
-                                          (let ((query-string (file-get-contents query-file-pathname))
-                                                (answer-batch (file-get-contents answer-file-pathname)))
-                                            (handler-case
-                                                (unless
-                                                    (answers-match-p
-                                                     answer-batch
-                                                     (let ((*standard-output* (make-string-output-stream)))
-                                                       (send-query-to-prolog-engine
-                                                        engine-socket
-                                                        query-string
-                                                        prefix-ht
-                                                        relationships)
-                                                       (get-output-stream-string *standard-output*)))
-                                                  (format t "Query ~D of ~A failed!~%"
-                                                          n (file-namestring test-kb-filename)))
-                                              (esrap:esrap-parse-error ()
-                                                (format t "Parse error in query file ~A~%"
-                                                        (file-namestring query-file-pathname)))))
-                                        else do
-                                          (format t "Finished testing ~A~%~%"
-                                                  (file-namestring test-kb-filename))
-                                          (throw 'continue nil))
-                               (close-socket engine-socket)))))
-
-                     (esrap:esrap-parse-error ()
-                       (format t "Parse error in KB file ~A~%~%"
-                               (file-namestring test-kb-filename)))
-                     (error (condition)
-                       (format t "An error was received: ~A~%" condition)))
-                (quit-prolog-engine process)))))))))
+            (handler-case
+                (let ((psoa-kb-string (file-get-contents test-kb-filename)))
+                  (multiple-value-bind (prolog-kb-string relationships
+                                        is-relational-p prefix-ht)
+                      (psoa-document->prolog psoa-kb-string :system system)
+                    (declare (ignore is-relational-p))
+                    (let ((process (start-prolog-process engine-client)))
+                      (unwind-protect
+                           (progn (init-prolog-process prolog-kb-string process :system system)
+                                  (run-test-case test-kb-filename subdirectory engine-client
+                                                 process prefix-ht relationships))
+                        (quit-prolog-engine process)))))
+              (esrap:esrap-parse-error ()
+                (format t "Parse error in KB file ~A~%~%"
+                        (file-namestring test-kb-filename)))
+              (error (condition)
+                (format t "An error was received: ~A~%~%" condition)))))))))

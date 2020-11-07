@@ -26,7 +26,7 @@
            :path *default-xsb-prolog-path*
            :socket (make-xsb-engine-socket)))))
 
-(defun connect-to-prolog (client &key port)
+(defun open-socket-to-prolog (client &key port)
   (check-type port (integer 0 65536))
   (setf (prolog-engine-client-socket client)
         (ecase (prolog-engine-client-host client)
