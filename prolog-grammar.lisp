@@ -19,7 +19,7 @@
     (or equals-goal functor-goal))
 
 (defrule equals-goal
-    (and "'='(" arg "," (* whitespace) arg ")")
+    (and (or "=(" "'='(") arg "," (* whitespace) arg ")")
   (:destructure (equals left comma ws right rparen)
     (declare (ignore equals comma ws rparen))
     (make-ruleml-equal :left left :right right)))

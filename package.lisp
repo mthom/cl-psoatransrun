@@ -167,9 +167,20 @@
   (:export #:translate-document #:translate-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
+(defpackage #:prolog-engine-client
+  (:use #:cl #:usocket)
+  (:export #:close-socket
+           #:connect-to-prolog
+           #:make-engine-client
+           #:prolog-engine-client-path
+           #:prolog-engine-client-host
+           #:in-socket-stream
+           #:out-socket-stream))
+
 (defpackage #:psoatransrun
-  (:use #:cl #:external-program #:psoa-ast #:psoa-grammar #:psoa-transformers
-        #:psoa-prolog-translator #:rutils #:trivia #:usocket)
+  (:use #:cl #:external-program #:prolog-engine-client #:psoa-ast
+        #:psoa-grammar #:psoa-transformers #:psoa-prolog-translator
+        #:rutils #:trivia #:usocket)
   (:export #:*all-solutions*
            #:*prolog-engine-path*
            #:connect-to-prolog-process
@@ -182,9 +193,10 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun-tests
-  (:use #:cl #:external-program #:pathname-utils #:psoatransrun
-        #:split-sequence #:usocket)
+  (:use #:cl #:external-program #:pathname-utils #:prolog-engine-client
+        #:psoatransrun #:split-sequence #:usocket)
   (:export #:run-test-suite))
 
 (defpackage #:prolog-grammar
   (:use #:cl #:esrap #:psoa-ast))
+

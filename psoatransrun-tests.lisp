@@ -48,14 +48,16 @@
     (equalp expected-answer-lines reported-answer-lines)))
 
 (defun run-test-suite (&key (system :scryer))
-  (let ((subdirectories (list-subdirectories *test-suite-directory*)))
+  (let ((subdirectories (list-subdirectories *test-suite-directory*))
+        (engine-client (make-engine-client system)))
     (dolist (subdirectory subdirectories)
       (let* ((test-kb-filename (kb-pathname subdirectory)))
         (when (probe-file test-kb-filename)
           (format t "Running ~A test suite ...~%" (file-namestring test-kb-filename))
 
           (catch 'continue
-            (let ((process (external-program:start *prolog-engine-path* nil
+            (let ((process (external-program:start (prolog-engine-client-path engine-client)
+                                                   nil
                                                    :input :stream
                                                    :output :stream)))
               (unwind-protect
@@ -68,7 +70,7 @@
                            (declare (ignore is-relational-p))
                            (init-prolog-process prolog-kb-string process :system system)
 
-                           (let ((engine-socket (connect-to-prolog-process process))
+                           (let ((engine-socket (connect-to-prolog-process engine-client process))
                                  (*all-solutions* t))
                              (unwind-protect
                                   (loop for n upfrom 1
@@ -83,7 +85,7 @@
                                                      answer-batch
                                                      (let ((*standard-output* (make-string-output-stream)))
                                                        (send-query-to-prolog-engine
-                                                        (socket-stream engine-socket)
+                                                        engine-socket
                                                         query-string
                                                         prefix-ht
                                                         relationships)
@@ -97,7 +99,7 @@
                                           (format t "Finished testing ~A~%~%"
                                                   (file-namestring test-kb-filename))
                                           (throw 'continue nil))
-                               (socket-close engine-socket)))))
+                               (close-socket engine-socket)))))
 
                      (esrap:esrap-parse-error ()
                        (format t "Parse error in KB file ~A~%~%"

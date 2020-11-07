@@ -36,7 +36,7 @@
      :test #'equal)))
 
 
-(defun translate-document (document &key (system :scryer))
+(defun translate-document (document &key system)
   "translate-document converts a document (a RuleML AST of type
 ruleml-document) to a string representing the equivalent Prolog
 KB. The 'system' argument is used to accommodate different declarative

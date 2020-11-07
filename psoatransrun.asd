@@ -6,6 +6,7 @@
   :serial t
   :depends-on (#:esrap #:external-program #:pathname-utils #:rutils #:trivia #:usocket)
   :components ((:file "package")
+               (:file "prolog-engine-client")
                (:file "prolog-grammar")
                (:file "psoa-ast")
                (:file "psoa-grammar")

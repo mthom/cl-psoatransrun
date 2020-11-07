@@ -30,7 +30,7 @@ eval_loop(Stream) :-
        split_vars(VNNames, UVNNames, RVNNames),
        catch(call(Term), _, false),
        phrase(compile_solution_string(RVNNames), VarString),
-       (  VarString == "" ->
+       (  RVNNames == [] ->
           write_term(Stream, 'Yes', [])
        ;
           write_term(Stream, VarString, [])
