@@ -195,10 +195,9 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun-tests
-  (:use #:cl #:esrap #:pathname-utils #:prolog-engine-client
-        #:psoa-ast #:psoatransrun #:rutils #:split-sequence #:usocket)
+  (:use #:cl #:pathname-utils #:prolog-engine-client
+        #:psoa-ast #:psoatransrun #:rutils #:usocket)
   (:export #:run-test-suite))
 
 (defpackage #:prolog-grammar
   (:use #:cl #:esrap #:psoa-ast))
-

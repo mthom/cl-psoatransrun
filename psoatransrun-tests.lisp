@@ -34,31 +34,19 @@
                  (directory (make-pathname :name :wild :type :wild
                                            :defaults pathname))))
 
-(defun nullify-node-positions (answer-list)
-  (mapcar #`(typecase %
-              (list (mapcar #`(transform-ast
-                               %
-                               (lambda (node &key &allow-other-keys)
-                                 (setf (ruleml-ast-node-position node) 0)
-                                 node))
-                            %))
-              (t %))
-          answer-list))
-
 (defun equal-answer-set-p (answer-set-1 answer-set-2)
   (cond
     ((and (typep answer-set-1 'string) (typep answer-set-2 'string))
      (string= answer-set-1 answer-set-2))
     ((and (typep answer-set-1 'list) (typep answer-set-2 'list))
-     (not (set-exclusive-or answer-set-1 answer-set-2
-                            :test #'equalp)))
+     (not (set-exclusive-or (mapcar #`(format nil "~A" %) answer-set-1)
+                            (mapcar #`(format nil "~A" %) answer-set-2)
+                            :test #'string=)))
     (t
      nil)))
 
 (defun answers-match-p (expected-answers reported-answers)
-  (let ((expected-answers (nullify-node-positions expected-answers))
-        (reported-answers (nullify-node-positions reported-answers)))
-    (every #'equal-answer-set-p expected-answers reported-answers)))
+  (every #'equal-answer-set-p expected-answers reported-answers))
 
 (defun run-test-case (test-kb-filename subdirectory engine-client
                       process prefix-ht relationships)

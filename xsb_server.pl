@@ -92,6 +92,10 @@ maplist(Pred, [X|Xs], [Y|Ys]) :-
     call(Pred, X, Y),
     maplist(Pred, Xs, Ys).
 
+atom_quoted(Atom, NewAtom) :-
+    atom_concat('\'', Atom, NewAtom0),
+    atom_concat(NewAtom0, '\'', NewAtom).
+
 replace_char_lists_with_strings(X, Y) :-
     (  number(X) ->
        X = Y
@@ -107,8 +111,13 @@ replace_char_lists_with_strings(X, Y) :-
        fmt_write_string(Y, "\"%s\"", args(X))
     ;
        X =.. [F | Args],
+       (  atom_concat('_',_, F) ->
+          atom_quoted(F, NewF)
+       ;
+          NewF = F
+       ),
        maplist(replace_char_lists_with_strings, Args, NewArgs),
-       Y =.. [F | NewArgs]
+       Y =.. [NewF | NewArgs]
     ).
 
 :- initialization(start_server).
