@@ -189,13 +189,14 @@
            #:psoa-load-and-repl
            #:psoa-query->prolog
            #:quit-prolog-engine
+           #:read-and-collect-solutions
            #:send-query-to-prolog-engine
            #:start-prolog-process)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun-tests
-  (:use #:cl #:pathname-utils #:prolog-engine-client
-        #:psoatransrun #:split-sequence #:usocket)
+  (:use #:cl #:esrap #:pathname-utils #:prolog-engine-client
+        #:psoa-ast #:psoatransrun #:rutils #:split-sequence #:usocket)
   (:export #:run-test-suite))
 
 (defpackage #:prolog-grammar

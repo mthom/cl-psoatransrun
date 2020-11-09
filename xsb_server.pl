@@ -87,8 +87,6 @@ compile_solution_string_([VN|VNs], PrefixString, VarString) :-
     compile_solution_string_(VNs, VarString0, VarString).
 
 
-% Primitives to compensate for the fact that XSB sucks.
-
 maplist(_, [], []).
 maplist(Pred, [X|Xs], [Y|Ys]) :-
     call(Pred, X, Y),
@@ -98,7 +96,11 @@ replace_char_lists_with_strings(X, Y) :-
     (  number(X) ->
        X = Y
     ;  atom(X) ->
-       fmt_write_string(Y, "'%s'", args(X))
+       (  atom_concat('_', _, X) ->
+          fmt_write_string(Y, "'%s'", args(X))
+       ;
+          fmt_write_string(Y, "%s", args(X))
+       )
     ;  var(X) ->
        Y = X
     ;  is_charlist(X) ->

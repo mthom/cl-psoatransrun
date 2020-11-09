@@ -198,12 +198,17 @@
         external-formula
         atomic))
 
+(defrule formula-list
+    (* (or formula whitespace comment))
+  (:lambda (formulas)
+    (remove nil formulas)))
+
 (defrule and-formula
-    (and "And" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))
+    (and "And" (* (or whitespace comment)) #\( formula-list #\))
   (:destructure (and ws1 lparen formulas rparen &bounds start)
-    (declare (ignore and ws1 lparen rparen))
-    (make-ruleml-and :terms (remove nil formulas)
-                     :position start)))
+                (declare (ignore and ws1 lparen rparen))
+                (make-ruleml-and :terms formulas
+                                 :position start)))
 
 (defrule or-formula
     (and "Or" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))

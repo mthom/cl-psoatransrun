@@ -39,26 +39,33 @@ the Prolog engine and receiving back solutions.
       (subseq solution-string 1 (1- (length solution-string)))
       solution-string))
 
-(defun read-and-print-solutions (engine-socket)
-  (loop for solution = (read-line (in-socket-stream engine-socket) nil nil)
-        do (cond ((string= solution "No")
-                  (format t "~%no~%")
-                  (return-from read-and-print-solutions))
-                 ((string= solution "Yes")
-                  (format t "~%yes~%")
-                  ;; Ignore following 'No'.
-                  (read-line (in-socket-stream engine-socket) nil nil)
-                  (return-from read-and-print-solutions))
-                 (t
-		          ;; The PSOA RuleML AST pretty printer defined in psoa-pprint.lisp
-		          ;; is implicitly invoked here by format.
-                  (format t "~{~A~^ ~}"
-                          (parse 'prolog-grammar::goal-sequence
-                                 (trim-solution-string solution)))
-                  (when *all-solutions*
-                    (terpri))))
-           (unless *all-solutions*
-             (read-char))))
+(defun read-and-collect-solutions (stream &optional (grammar 'prolog-grammar::goal-sequence))
+  (loop for solution = (read-line stream nil nil)
+        if (null solution)
+          collect "no" into solutions
+          and do (return solutions)
+        else if (equalp solution "No")
+          collect "no" into solutions
+          and do (return solutions)
+        else if (equalp solution "Yes") do
+          (read-line stream nil nil)
+             and collect "yes" into solutions
+             and do (return solutions)
+        else collect
+             (parse grammar (trim-solution-string solution))
+          into solutions))
+
+(defun print-solutions (solutions)
+  (loop for solution in solutions
+        do (match solution
+             ((type list)
+              (format t "~{~A~^ ~}" solution))
+             ((or "no" "yes")
+              (format t "~A~%" solution)
+              (return)))
+           (if *all-solutions*
+               (terpri)
+               (read-char))))
 
 (defun psoa-repl (engine-socket prefix-ht &optional (relationships (make-hash-table :test #'equalp)))
   (loop (handler-case (-psoa-repl engine-socket prefix-ht relationships)
@@ -70,9 +77,9 @@ the Prolog engine and receiving back solutions.
 (defun -psoa-repl (engine-socket prefix-ht relationships)
   (loop for line = (progn (write-string "> ")
                           (read-line *standard-input* nil))
-        if line do (send-query-to-prolog-engine
-                    engine-socket line
-                    prefix-ht relationships)))
+        if line do (print-solutions (send-query-to-prolog-engine
+                                     engine-socket line
+                                     prefix-ht relationships))))
 
 (defun send-query-to-prolog-engine (engine-socket query-string prefix-ht relationships)
   (multiple-value-bind (query-string toplevel-var-string)
@@ -80,14 +87,16 @@ the Prolog engine and receiving back solutions.
     (write-line query-string (out-socket-stream engine-socket))
     (write-line toplevel-var-string (out-socket-stream engine-socket))
     (force-output (out-socket-stream engine-socket))
-    (read-and-print-solutions engine-socket)))
+    (read-and-collect-solutions (in-socket-stream engine-socket))))
 
 (defun quit-prolog-engine (process)
   (write-line "end_of_file." (sb-ext:process-input process))
   (write-line "halt." (sb-ext:process-input process))
   (finish-output (sb-ext:process-input process))
+
   (close (sb-ext:process-input process) :abort t)
   (close (sb-ext:process-output process) :abort t)
+
   (sb-ext:process-wait process)
   (sb-ext:process-close process))
 

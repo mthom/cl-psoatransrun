@@ -1,6 +1,8 @@
 
 (in-package #:psoatransrun-tests)
 
+(named-readtables:in-readtable rutils-readtable)
+
 (defparameter *test-suite-directory*
   "/home/mark/git/PSOATransRunComponents/PSOATransRun/test/")
 
@@ -32,20 +34,31 @@
                  (directory (make-pathname :name :wild :type :wild
                                            :defaults pathname))))
 
-(defun process-answer-string (answer-string)
-  (loop for item in (remove-duplicates
-                     (sort (cons "no" (split-sequence #\Newline answer-string)) #'string<=)
-                     :test #'string=)
-        for new-item = (string-trim '(#\Space #\Newline #\Backspace #\Tab
-                                      #\Linefeed #\Page #\Return #\Rubout)
-                                    item)
-        when (string/= "" new-item)
-          collect new-item))
+(defun nullify-node-positions (answer-list)
+  (mapcar #`(typecase %
+              (list (mapcar #`(transform-ast
+                               %
+                               (lambda (node &key &allow-other-keys)
+                                 (setf (ruleml-ast-node-position node) 0)
+                                 node))
+                            %))
+              (t %))
+          answer-list))
+
+(defun equal-answer-set-p (answer-set-1 answer-set-2)
+  (cond
+    ((and (typep answer-set-1 'string) (typep answer-set-2 'string))
+     (string= answer-set-1 answer-set-2))
+    ((and (typep answer-set-1 'list) (typep answer-set-2 'list))
+     (not (set-exclusive-or answer-set-1 answer-set-2
+                            :test #'equalp)))
+    (t
+     nil)))
 
 (defun answers-match-p (expected-answers reported-answers)
-  (let ((expected-answer-lines (process-answer-string expected-answers))
-        (reported-answer-lines (process-answer-string reported-answers)))
-    (equalp expected-answer-lines reported-answer-lines)))
+  (let ((expected-answers (nullify-node-positions expected-answers))
+        (reported-answers (nullify-node-positions reported-answers)))
+    (every #'equal-answer-set-p expected-answers reported-answers)))
 
 (defun run-test-case (test-kb-filename subdirectory engine-client
                       process prefix-ht relationships)
@@ -61,14 +74,14 @@
                    (handler-case
                        (unless
                            (answers-match-p
-                            answer-batch
-                            (let ((*standard-output* (make-string-output-stream)))
-                              (send-query-to-prolog-engine
-                               engine-socket
-                               query-string
-                               prefix-ht
-                               relationships)
-                              (get-output-stream-string *standard-output*)))
+                            (read-and-collect-solutions
+                             (make-string-input-stream answer-batch)
+                             'psoa-grammar::formula-list)
+                            (send-query-to-prolog-engine
+                             engine-socket
+                             query-string
+                             prefix-ht
+                             relationships))
                          (format t "Query ~D of ~A failed!~%"
                                  n (file-namestring test-kb-filename)))
                      (esrap:esrap-parse-error ()
