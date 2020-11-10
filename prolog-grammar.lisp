@@ -82,8 +82,8 @@ pretty printer defined in #:psoa-pprint.
     (or var goal))
 
 (defrule var
-    (and (character-ranges (#\A #\Z))
+    (and (or #\_ (character-ranges (#\A #\Z)))
          (* (not (or #\) #\,))))
   (:text t)
   (:lambda (contents)
-    (make-ruleml-var :name (subseq contents 1)))) ;; Skip the leading 'Q'.
+    (make-ruleml-var :name (subseq contents 1)))) ;; Skip the leading 'Q' or '_'.

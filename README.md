@@ -1,9 +1,5 @@
-# PSOATransRun
-### _Your Name <your.name@example.com>_
+# cl-psoatransrun
+### Mark Thom <markjordanthom@gmail.com>
 
-This is a project to do ... something.
-
-## License
-
-Specify license here
+A CL implementation of PSOATransRun, an implementation of the PSOA RuleML data and rule language.
 

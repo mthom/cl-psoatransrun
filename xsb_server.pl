@@ -100,7 +100,7 @@ replace_char_lists_with_strings(X, Y) :-
     (  number(X) ->
        X = Y
     ;  atom(X) ->
-       (  atom_concat('_', _, X) ->
+       (  atom_concat('_', _, X) | atom_concat('<', _, X) ->
           fmt_write_string(Y, "'%s'", args(X))
        ;
           fmt_write_string(Y, "%s", args(X))

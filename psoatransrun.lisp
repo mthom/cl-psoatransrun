@@ -162,10 +162,13 @@ is begun by an :- initialization(...) directive."
 to the process input stream. Wait for the process to close after closing
 the process input and output streams."
   (write-line "end_of_file." (out-socket-stream (prolog-engine-client-socket engine-client)))
+  (finish-output (out-socket-stream (prolog-engine-client-socket engine-client)))
+
+  (close-socket (prolog-engine-client-socket engine-client))
+
   (write-line "halt." (sb-ext:process-input process))
   (finish-output (sb-ext:process-input process))
 
-  (close-socket (prolog-engine-client-socket engine-client))
   (close (sb-ext:process-input process) :abort t)
   (close (sb-ext:process-output process) :abort t)
 
