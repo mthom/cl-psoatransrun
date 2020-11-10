@@ -6,7 +6,7 @@
 
 :- module(xsb_server, []).
 
-:- use_module(file_io, [fd2ioport/2, file_flush/2, fmt_write_string/3]).
+:- use_module(file_io, [fd2ioport/2, file_close/1, file_flush/2, fmt_write_string/3]).
 :- use_module(xsb_writ, [file_write_canonical/2]).
 :- use_module(lists, [member/2]).
 :- use_module(socket, [
@@ -34,7 +34,11 @@ start_server :-
     socket_accept(Socket, OutSocket, _),
     fd2ioport(OutSocket, OutStream),
     eval_loop(InStream, OutStream),
-    socket_close(Socket, _). % socket_server_close(ServerSocket).
+    socket_close(Socket, _), % socket_server_close(ServerSocket).
+    socket_close(InSocket, _),
+    socket_close(OutSocket, _),
+    file_close(InStream),
+    file_close(OutStream).
 
 eval_loop(InStream, OutStream) :-
     read_term(InStream, Term, [variable_names(VNNames)]),

@@ -341,22 +341,32 @@ function term OIDs for atoms left oidless in the KB."
                     :descriptors (list (make-ruleml-tuple :dep t :terms (cons root terms)))))
 
 (defun is-relationship-p (term prefix-ht)
+  "Similarly to ground-atom-p, search the internals of \"term\" for
+proof that it is not a relationship. is-relationship-p is always
+called in the context of a KB atom."
+  ;; if-it is an anaphoric macro binding the return value of
+  ;; (predicate-name term prefix-ht) to the symbol "it" in the scope
+  ;; of its true branch form.
   (if-it (predicate-name term prefix-ht)
          (transform-ast term
-                  (lambda (term &key &allow-other-keys)
-                    (match term
-                      ((ruleml-atom :descriptors descriptors)
-                       (when (and (string= it (predicate-name term prefix-ht))
-                                  (not (and (single descriptors)
-                                            (ruleml-tuple-p (first descriptors))
-                                            (ruleml-tuple-dep (first descriptors)))))
-                         (return-from is-relationship-p nil))
-                       term)
-                      ((or (ruleml-oidful-atom) (ruleml-membership))
-                       (when (string= it (predicate-name term prefix-ht))
-                         (return-from is-relationship-p nil))
-                       term)
-                      (_ term))))
+                        (lambda (term &key &allow-other-keys)
+                          (match term
+                            ((ruleml-atom :descriptors descriptors)
+                             (when (and (string= it (predicate-name term prefix-ht))
+                                        ;; by definition,
+                                        ;; relationships have a
+                                        ;; dependent tuple as their
+                                        ;; only descriptor.
+                                        (not (and (single descriptors)
+                                                  (ruleml-tuple-p (first descriptors))
+                                                  (ruleml-tuple-dep (first descriptors)))))
+                               (return-from is-relationship-p nil))
+                             term)
+                            ((or (ruleml-oidful-atom) (ruleml-membership))
+                             (when (string= it (predicate-name term prefix-ht))
+                               (return-from is-relationship-p nil))
+                             term)
+                            (_ term))))
          (return-from is-relationship-p nil))
   t)
 
@@ -444,14 +454,6 @@ predicates."
 
       ;; term is not in a query, so leave it unchanged.
       term))
-
-#|
-Static/dynamic objectification:
-
-1) Is objectify_s(\phi, \omega) if \omega is a non-relational atom, or,
-is objectify_d(\phi, \omega) if \omega is relational.
-
-|#
 
 (defun kb-relationships (ruleml-assert prefix-ht)
   "A utility function to scan a RuleML Assert AST node, and, with the
