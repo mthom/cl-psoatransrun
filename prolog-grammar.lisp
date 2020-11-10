@@ -1,6 +1,17 @@
 
 (in-package #:prolog-grammar)
 
+#|
+
+A simplified Prolog parser written in esrap rules representing Prolog
+goals and equalities in terms of the ruleml-ast-node subtyped structs
+of #:psoa-ast. The Prolog server returns solution strings in Prolog
+notation, which are parsed on the Lisp side as PSOA RuleML ASTs, and
+printed back to the REPL and to the test suite, using the PSOA RuleML
+pretty printer defined in #:psoa-pprint.
+
+|#
+
 (defrule whitespace
     (+ (or #\Space #\Tab #\Newline (and #\Return #\Newline)))
   (:constant nil))

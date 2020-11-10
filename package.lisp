@@ -147,7 +147,6 @@
            #:make-ruleml-membership)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
-
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)
   (:export #:pprint-ruleml-document))
@@ -174,6 +173,7 @@
            #:open-socket-to-prolog
            #:prolog-engine-client-path
            #:prolog-engine-client-host
+           #:prolog-engine-client-socket
            #:in-socket-stream
            #:out-socket-stream))
 

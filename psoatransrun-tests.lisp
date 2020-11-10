@@ -49,37 +49,35 @@
   (every #'equal-answer-set-p expected-answers reported-answers))
 
 (defun run-test-case (test-kb-filename subdirectory engine-client
-                      process prefix-ht relationships)
-  (let ((engine-socket (connect-to-prolog-process engine-client process))
+                      prefix-ht relationships)
+  (let ((engine-socket (prolog-engine-client-socket engine-client))
         (*all-solutions* t))
-    (unwind-protect
-         (loop for n upfrom 1
-               for query-file-pathname = (query-pathname subdirectory n)
-               for answer-file-pathname = (answer-pathname subdirectory n)
-               if (probe-file query-file-pathname) do
-                 (let ((query-string (file-get-contents query-file-pathname))
-                       (answer-batch (file-get-contents answer-file-pathname)))
-                   (handler-case
-                       (unless
-                           (answers-match-p
-                            (read-and-collect-solutions
-                             (make-string-input-stream answer-batch)
-                             'psoa-grammar::formula-list)
-                            (send-query-to-prolog-engine
-                             engine-socket
-                             query-string
-                             prefix-ht
-                             relationships))
-                         (format t "Query ~D of ~A failed!~%"
-                                 n (file-namestring test-kb-filename)))
-                     (esrap:esrap-parse-error ()
-                       (format t "Parse error in query file ~A~%"
-                               (file-namestring query-file-pathname)))))
-               else do
-                 (format t "Finished testing ~A~%~%"
-                         (file-namestring test-kb-filename))
-                 (throw 'continue nil))
-      (close-socket engine-socket))))
+    (loop for n upfrom 1
+          for query-file-pathname = (query-pathname subdirectory n)
+          for answer-file-pathname = (answer-pathname subdirectory n)
+          if (probe-file query-file-pathname) do
+            (let ((query-string (file-get-contents query-file-pathname))
+                  (answer-batch (file-get-contents answer-file-pathname)))
+              (handler-case
+                  (unless
+                      (answers-match-p
+                       (read-and-collect-solutions
+                        (make-string-input-stream answer-batch)
+                        'psoa-grammar::formula-list)
+                       (send-query-to-prolog-engine
+                        engine-socket
+                        query-string
+                        prefix-ht
+                        relationships))
+                    (format t "Query ~D of ~A failed!~%"
+                            n (file-namestring test-kb-filename)))
+                (esrap:esrap-parse-error ()
+                  (format t "Parse error in query file ~A~%"
+                          (file-namestring query-file-pathname)))))
+          else do
+            (format t "Finished testing ~A~%~%"
+                    (file-namestring test-kb-filename))
+            (throw 'continue nil))))
 
 (defun run-test-suite (&key (system :scryer))
   (let ((subdirectories (list-subdirectories *test-suite-directory*))
@@ -98,9 +96,10 @@
                     (let ((process (start-prolog-process engine-client)))
                       (unwind-protect
                            (progn (init-prolog-process prolog-kb-string process :system system)
+                                  (connect-to-prolog-process engine-client process)
                                   (run-test-case test-kb-filename subdirectory engine-client
-                                                 process prefix-ht relationships))
-                        (quit-prolog-engine process)))))
+                                                 prefix-ht relationships))
+                        (quit-prolog-engine process engine-client)))))
               (esrap:esrap-parse-error ()
                 (format t "Parse error in KB file ~A~%~%"
                         (file-namestring test-kb-filename)))

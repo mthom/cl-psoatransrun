@@ -1,7 +1,29 @@
 
 (in-package #:psoa-pprint)
 
-(defparameter *inside-psoa-rest* nil)
+#|
+This package contains functions for pretty-printing objects whose
+supertype is ruleml-ast-node, all of which are defined in
+psoa-ast.lisp (i.e., the content of the package #:psoa-ast).
+
+While objects of supertype ruleml-ast-node are assembled from string
+KBs into PSOA RuleML ASTs by the EBNF-like grammar rules of
+psoa-grammar.lisp, the functions here perform the inverse function:
+they convert PSOA RuleML ASTs back to the string representations of
+the PSOA RuleML KBs approximately like those from which they were
+produced.
+
+Documentation of the Common Lisp Pretty Printing System, which is used
+extensively in this package, is available here:
+
+https://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node253.html
+|#
+
+
+(defparameter *inside-psoa-rest* nil
+  "A contextual flag / boolean indicating whether the subterms of a
+PSOA RuleML atom or expression are currently being printed.")
+
 
 (defun pprint-ruleml-document (stream document)
   (pprint-logical-block (stream nil :prefix "RuleML(" :suffix ")")

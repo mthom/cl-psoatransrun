@@ -1,6 +1,24 @@
 
 (in-package #:psoa-grammar)
 
+#|
+This package specifies EBNF-like grammar rules for parsing PSOA
+RuleML, documents and queries into abstract syntax trees (AST)
+preserving their structure and content. The types of the PSOA RuleML
+AST nodes constructed by the rules are defined in the package
+#:psoa-ast.
+
+The rules themsleves are specified in the rule notation of the esrap
+library, a backtracking packrat parser for Common Lisp, documented in:
+
+https://scymtym.github.io/esrap/
+
+The rules are in nearly one-to-one correspondence with the PSOA RuleML
+grammar specified at this link in EBNF notation:
+
+http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Presentation_Syntax
+|#
+
 ;; The rule language.
 
 (defrule ruleml
@@ -16,12 +34,12 @@
          (* (or whitespace comment)))
   (:destructure (ruleml ws1 lparen ws2 base prefixes imports performatives rparen ws3
                         &bounds start)
-    (declare (ignore ruleml ws1 lparen ws2 rparen ws3))
-    (make-ruleml-document :base base
-                          :prefixes (remove nil prefixes)
-                          :imports (remove nil imports)
-                          :performatives (remove nil performatives)
-                          :position start)))
+                (declare (ignore ruleml ws1 lparen ws2 rparen ws3))
+                (make-ruleml-document :base base
+                                      :prefixes (remove nil prefixes)
+                                      :imports (remove nil imports)
+                                      :performatives (remove nil performatives)
+                                      :position start)))
 
 (defrule multi-line-comment
     (or (and "<!--" (* (and (! "-->") character)) "-->")
@@ -63,8 +81,8 @@
          #\))
   (:destructure (prefix ws1 lparen ws2 name ws3 colon ws4 iri-ref ws5 rparen
                         &bounds start)
-    (declare (ignore prefix ws1 lparen ws2 ws3 colon ws4 rparen ws5))
-    (make-ruleml-prefix :name name :iri-ref iri-ref :position start)))
+                (declare (ignore prefix ws1 lparen ws2 ws3 colon ws4 rparen ws5))
+                (make-ruleml-prefix :name name :iri-ref iri-ref :position start)))
 
 (defrule import
     (and "Import"
@@ -78,10 +96,10 @@
          #\)
          (* (or whitespace comment)))
   (:destructure (import ws1 lparen ws2 iri-ref ws3 profile ws4 rparen ws5 &bounds start)
-    (declare (ignore import ws1 lparen ws2 ws3 rparen ws4 ws5))
-    (make-ruleml-import :iri-ref iri-ref
-                        :profile profile
-                        :position start)))
+                (declare (ignore import ws1 lparen ws2 ws3 rparen ws4 ws5))
+                (make-ruleml-import :iri-ref iri-ref
+                                    :profile profile
+                                    :position start)))
 
 (defrule assert
     (and (or "Assert" "Group")
@@ -91,8 +109,8 @@
          #\)
          (* (or whitespace comment)))
   (:destructure (assert ws1 lparen rules rparen ws2 &bounds start)
-    (declare (ignore assert ws1 lparen rparen ws2))
-    (make-ruleml-assert :items (remove nil rules) :position start)))
+                (declare (ignore assert ws1 lparen rparen ws2))
+                (make-ruleml-assert :items (remove nil rules) :position start)))
 
 (defrule query
     (and "Query"
@@ -104,9 +122,9 @@
          #\)
          (* (or whitespace comment)))
   (:destructure (query ws1 lparen ws2 formula ws3 rparen ws4 &bounds start)
-    (declare (ignore query ws1 lparen ws2 ws3 rparen ws4))
-    (make-ruleml-query :term formula
-                       :position start)))
+                (declare (ignore query ws1 lparen ws2 ws3 rparen ws4))
+                (make-ruleml-query :term formula
+                                   :position start)))
 
 (defrule rule
     (or forall-clause clause))
@@ -121,10 +139,10 @@
          #\)
          (* (or whitespace comment)))
   (:destructure (forall vars lparen ws1 clause ws2 rparen ws3 &bounds start)
-    (declare (ignore forall lparen ws1 ws2 rparen ws3))
-    (make-ruleml-forall :vars (remove nil vars)
-                        :clause clause
-                        :position start)))
+                (declare (ignore forall lparen ws1 ws2 rparen ws3))
+                (make-ruleml-forall :vars (remove nil vars)
+                                    :clause clause
+                                    :position start)))
 
 (defrule clause
     (or implies head))
@@ -136,10 +154,10 @@
          (* (or whitespace comment))
          formula)
   (:destructure (head ws1 implies ws2 formula &bounds start)
-    (declare (ignore ws1 implies ws2))
-    (make-ruleml-implies :conclusion head
-                         :condition formula
-                         :position start)))
+                (declare (ignore ws1 implies ws2))
+                (make-ruleml-implies :conclusion head
+                                     :condition formula
+                                     :position start)))
 
 (defrule head
     (or head-and head-exists atomic))
@@ -152,9 +170,9 @@
          (* (or whitespace comment))
          #\))
   (:destructure (naf lbrack ws1 formula ws2 rbrack &bounds start)
-    (declare (ignore naf lbrack ws1 ws2 rbrack))
-    (make-ruleml-naf :formula formula
-                     :position start)))
+                (declare (ignore naf lbrack ws1 ws2 rbrack))
+                (make-ruleml-naf :formula formula
+                                 :position start)))
 
 (defrule head-exists
     (and "Exists"
@@ -165,10 +183,10 @@
          (* (or whitespace comment))
          #\))
   (:destructure (exists vars lparen ws1 formula ws2 rparen &bounds start)
-    (declare (ignore exists ws1 ws2 lparen rparen))
-    (make-ruleml-exists :vars (remove nil vars)
-                        :formula formula
-                        :position start)))
+                (declare (ignore exists ws1 ws2 lparen rparen))
+                (make-ruleml-exists :vars (remove nil vars)
+                                    :formula formula
+                                    :position start)))
 
 (defrule head-and
     (and "And"
@@ -178,9 +196,9 @@
          #\)
          (* (or whitespace comment)))
   (:destructure (and ws1 lparen formulas rparen ws2 &bounds start)
-    (declare (ignore and ws1 lparen rparen ws2))
-    (make-ruleml-and :terms (remove nil formulas)
-                     :position start)))
+                (declare (ignore and ws1 lparen rparen ws2))
+                (make-ruleml-and :terms (remove nil formulas)
+                                 :position start)))
 
 (defrule profile
     angle-bracket-iri)
@@ -213,9 +231,9 @@
 (defrule or-formula
     (and "Or" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))
   (:destructure (or ws1 lparen formulas rparen &bounds start)
-    (declare (ignore or ws1 lparen rparen))
-    (make-ruleml-or :terms (remove nil formulas)
-                    :position start)))
+                (declare (ignore or ws1 lparen rparen))
+                (make-ruleml-or :terms (remove nil formulas)
+                                :position start)))
 
 (defrule exists-formula
     (and "Exists"
@@ -227,10 +245,10 @@
          (* (or whitespace comment))
          #\))
   (:destructure (exists vars ws1 lparen ws2 formula ws3 rparen &bounds start)
-    (declare (ignore exists ws1 ws2 lparen ws3 rparen))
-    (make-ruleml-exists :vars (remove nil vars)
-                        :formula formula
-                        :position start)))
+                (declare (ignore exists ws1 ws2 lparen ws3 rparen))
+                (make-ruleml-exists :vars (remove nil vars)
+                                    :formula formula
+                                    :position start)))
 
 (defrule external-formula
     (and "External"
@@ -241,8 +259,8 @@
          (* (or whitespace comment))
          #\))
   (:destructure (external ws1 lparen ws2 atom ws3 rparen &bounds start)
-    (declare (ignore external ws1 lparen ws2 ws3 rparen))
-    (make-ruleml-external :atom atom :position start)))
+                (declare (ignore external ws1 lparen ws2 ws3 rparen))
+                (make-ruleml-external :atom atom :position start)))
 
 (defrule atomic
     (or subclass equal atom))
@@ -257,8 +275,8 @@
          (* (or whitespace comment))
          term)
   (:destructure (left ws1 equal ws2 right &bounds start)
-    (declare (ignore ws1 equal ws2))
-    (make-ruleml-equal :left left :right right :position start)))
+                (declare (ignore ws1 equal ws2))
+                (make-ruleml-equal :left left :right right :position start)))
 
 (defrule subclass
     (and term
@@ -267,8 +285,8 @@
          (* (or whitespace comment))
          term)
   (:destructure (subclass ws1 subclass-rel ws2 superclass &bounds start)
-    (declare (ignore ws1 subclass-rel ws2))
-    (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))
+                (declare (ignore ws1 subclass-rel ws2))
+                (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))
 
 (defrule psoa
     (or atom expr))
@@ -279,10 +297,10 @@
          (! (or #\# whitespace comment))
          atom-oidless-short)
   (:destructure (oid hash not-hash atom &bounds start)
-    (declare (ignore hash not-hash))
-    (if (ruleml-atom-p atom)
-        (make-ruleml-oidful-atom :oid oid :predicate atom :position start)
-        (make-ruleml-membership :oid oid :predicate atom :position start))))
+                (declare (ignore hash not-hash))
+                (if (ruleml-atom-p atom)
+                    (make-ruleml-oidful-atom :oid oid :predicate atom :position start)
+                    (make-ruleml-membership :oid oid :predicate atom :position start))))
 
 (defrule atom-oidless
     (or atom-oidless-short atom-oidless-long))
@@ -290,24 +308,24 @@
 (defrule atom-oidless-short
     (and term (? psoa-rest))
   (:destructure (root descriptors &bounds start)
-    (let ((descriptors (remove nil descriptors)))
-      (if (null descriptors)
-          root
-          (make-ruleml-atom :root root
-                            :descriptors descriptors
-                            :position start)))))
+                (let ((descriptors (remove nil descriptors)))
+                  (if (null descriptors)
+                      root
+                      (make-ruleml-atom :root root
+                                        :descriptors descriptors
+                                        :position start)))))
 
 (defrule atom-oidless-long
     (and #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
   (:destructure (hash not-hash atom-oidless-short &bounds start)
-    (declare (ignore hash not-hash))
-    (if (ruleml-atom-p atom-oidless-short)
-        atom-oidless-short
-        (make-ruleml-atom :root atom-oidless-short
-                          :descriptors nil
-                          :position start))))
+                (declare (ignore hash not-hash))
+                (if (ruleml-atom-p atom-oidless-short)
+                    atom-oidless-short
+                    (make-ruleml-atom :root atom-oidless-short
+                                      :descriptors nil
+                                      :position start))))
 
 (define-condition implicit-and-explicit-tuples-in-same-atom (error)
   ((descriptors-position :initarg :descriptors-position)
@@ -343,7 +361,7 @@
                    if (ruleml-slot-p descriptor)
                      do (set-position-if-null first-slot-position descriptor)
                    else if (ruleml-tuple-p descriptor)
-                     do (set-position-if-null first-tuple-position descriptor)
+                          do (set-position-if-null first-tuple-position descriptor)
                    else
                      collect descriptor into terms
                      and do (incf term-count)
@@ -372,18 +390,18 @@
          (* (or whitespace comment))
          #\))
   (:destructure (lparen ws1 descriptors ws2 rparen &bounds start)
-    (declare (ignore ws1 lparen ws2 rparen))
-    (check-descriptors (remove nil descriptors) (1+ start))))
+                (declare (ignore ws1 lparen ws2 rparen))
+                (check-descriptors (remove nil descriptors) (1+ start))))
 
 (defrule psoa-rest-list
     (and (or slot-di tuple-di subterm)
          (* (or whitespace comment))
          (or (& ")") psoa-rest-list))
   (:destructure (subterm ws rest)
-    (declare (ignore ws))
-    (if (listp rest)
-        (cons subterm (remove nil rest))
-        (list subterm))))
+                (declare (ignore ws))
+                (if (listp rest)
+                    (cons subterm (remove nil rest))
+                    (list subterm))))
 
 (defrule expr
     (or expr-short expr-long))
@@ -397,19 +415,19 @@
          (* (and slot-d (* (or whitespace comment))))
          #\))
   (:destructure (root lparen ws tuple-terms slot-terms rparen &bounds start)
-    (declare (ignore lparen ws rparen))
-    (let* ((remove-nil-from-sublists (alexandria:compose #'first (alexandria:curry #'remove nil)))
-           (tuple-terms (mapcar remove-nil-from-sublists tuple-terms))
-           (slot-terms  (mapcar remove-nil-from-sublists slot-terms)))
-      (make-ruleml-expr :root root
-                        :terms (append tuple-terms slot-terms)
-                        :position start))))
+                (declare (ignore lparen ws rparen))
+                (let* ((remove-nil-from-sublists (alexandria:compose #'first (alexandria:curry #'remove nil)))
+                       (tuple-terms (mapcar remove-nil-from-sublists tuple-terms))
+                       (slot-terms  (mapcar remove-nil-from-sublists slot-terms)))
+                  (make-ruleml-expr :root root
+                                    :terms (append tuple-terms slot-terms)
+                                    :position start))))
 
 (defrule expr-long
     (and #\^ expr-short)
   (:destructure (hat expr)
-    (declare (ignore hat))
-    expr))
+                (declare (ignore hat))
+                expr))
 
 (defrule tuple-di
     (and (or plus-sign minus-sign)
@@ -417,11 +435,11 @@
          (* (or subterm whitespace comment))
          #\])
   (:destructure (dep lsqbrack terms rsqbrack &bounds start)
-    (declare (ignore lsqbrack rsqbrack))
-    (let ((dep (string= dep "+")))
-      (make-ruleml-tuple :dep dep
-                         :terms (remove nil terms)
-                         :position start))))
+                (declare (ignore lsqbrack rsqbrack))
+                (let ((dep (string= dep "+")))
+                  (make-ruleml-tuple :dep dep
+                                     :terms (remove nil terms)
+                                     :position start))))
 
 (defrule tuple-d
     (and plus-sign
@@ -429,10 +447,10 @@
          (* (or subterm whitespace comment))
          #\])
   (:destructure (plus-sign lsqbrack terms rsqbrack &bounds start)
-    (declare (ignore plus-sign lsqbrack rsqbrack))
-    (make-ruleml-tuple :dep t
-                       :terms (remove nil terms)
-                       :position start)))
+                (declare (ignore plus-sign lsqbrack rsqbrack))
+                (make-ruleml-tuple :dep t
+                                   :terms (remove nil terms)
+                                   :position start)))
 
 (defrule slot-di
     (and subterm (or "+>" "->") subterm)
@@ -443,8 +461,8 @@
 (defrule slot-d
     (and subterm "+>" subterm)
   (:destructure (term1 dep-sign term2 &bounds start)
-    (declare (ignore dep-sign))
-    (make-ruleml-slot :dep t :name term1 :filler term2 :position start)))
+                (declare (ignore dep-sign))
+                (make-ruleml-slot :dep t :name term1 :filler term2 :position start)))
 
 (defrule term
     (or external-expr
@@ -458,21 +476,21 @@
         expr
         atom-oidful
         const ;;(and const (! (or #\# #\()))
-        var ;;(and var (! (or #\# #\()))
+        var   ;;(and var (! (or #\# #\()))
         atom-oidless-long))
 
 (defrule external-expr
     (and "External"
-	 (* (or whitespace comment))
-	 #\(
-	 (* (or whitespace comment))
-	 expr
-	 (* (or whitespace comment))
-	 #\)
-	 (* (or whitespace comment)))
+	     (* (or whitespace comment))
+	     #\(
+	     (* (or whitespace comment))
+	     expr
+	     (* (or whitespace comment))
+	     #\)
+	     (* (or whitespace comment)))
   (:destructure (external ws1 lparen ws2 expr ws3 rparen ws4 &bounds start)
-    (declare (ignore external ws1 lparen rparen ws2 ws3 ws4))
-    (make-ruleml-external :atom expr :position start)))
+                (declare (ignore external ws1 lparen rparen ws2 ws3 ws4))
+                (make-ruleml-external :atom expr :position start)))
 
 (defrule const
     (or const-short const-string))
@@ -493,19 +511,19 @@
 (defrule const-string
     (and unicode-string "^^" sym-space)
   (:destructure (unicode-string carets sym-space &bounds start)
-    (make-ruleml-string :contents (concatenate 'string
-                                               (ruleml-string-contents unicode-string)
-                                               carets
-                                               sym-space)
-                        :position start)))
+                (make-ruleml-string :contents (concatenate 'string
+                                                           (ruleml-string-contents unicode-string)
+                                                           carets
+                                                           sym-space)
+                                    :position start)))
 
 (defrule var
     (and #\? (? pn-local))
   (:destructure (question-mark pn-local &bounds start)
-    (declare (ignore question-mark))
-    (if pn-local
-        (make-ruleml-var :name pn-local :position start)
-        (psoa-transformers::fresh-variable))))
+                (declare (ignore question-mark))
+                (if pn-local
+                    (make-ruleml-var :name pn-local :position start)
+                    (psoa-transformers::fresh-variable))))
 
 (defrule sym-space
     (or angle-bracket-iri curie))
@@ -515,15 +533,15 @@
 (defrule unicode-string
     (and #\" (* (or echar (not (or #\" #\\ eol)))) #\")
   (:destructure (dbl-quote0 chars dbl-quote1 &bounds start)
-    (declare (ignore dbl-quote0 dbl-quote1))
-    (make-ruleml-string :contents (concatenate 'string chars)
-                        :position start)))
+                (declare (ignore dbl-quote0 dbl-quote1))
+                (make-ruleml-string :contents (concatenate 'string chars)
+                                    :position start)))
 
 (defrule iri-ref
     (and #\< (* iri-ref-char) #\>)
   (:destructure (lbrack iri-ref-chars rbrack)
-    (declare (ignore lbrack rbrack))
-    (concatenate 'string iri-ref-chars)))
+                (declare (ignore lbrack rbrack))
+                (concatenate 'string iri-ref-chars)))
 
 (defrule iri-ref-char
     (not (or #\< #\> #\" #\{ #\} #\| #\^ #\` #\\
@@ -590,8 +608,8 @@
 (defrule echar
     (and #\\ (character-ranges #\t #\b #\n #\r #\f #\\ #\" #\'))
   (:destructure (backslash char)
-    (declare (ignore backslash))
-    char))
+                (declare (ignore backslash))
+                char))
 
 (defrule eol
     (or #\newline #\return))
@@ -603,13 +621,13 @@
 (defrule pname-ln
     (and pname-ns pn-local)
   (:destructure (ns local &bounds start)
-    (make-ruleml-pname-ln :name ns :url local :position start)))
+                (make-ruleml-pname-ln :name ns :url local :position start)))
 
 (defrule pname-ns
     (and (? pn-prefix) #\:)
   (:destructure (pn-prefix colon)
-    (declare (ignore colon))
-    pn-prefix))
+                (declare (ignore colon))
+                pn-prefix))
 
 (defrule name nc-name)
 

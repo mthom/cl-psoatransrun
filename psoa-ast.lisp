@@ -7,6 +7,10 @@
 (named-readtables:in-readtable rutils-readtable)
 
 (defstruct ruleml-ast-node
+  "The supertype from which all PSOA RuleML AST nodes derive. The
+position slot refers to the original lexical position within a RuleML
+document, its character offset into the document string. The position
+is typed as a non-negative integer and has a default of 0."
   (position 0 :type (integer 0 *)))
 
 (defstruct (ruleml-document (:include ruleml-ast-node))
@@ -180,8 +184,8 @@ combinations:
 |nil            |nil            |fact           |
 +---------------+---------------+---------------+
 
-transform-ast sets but does not consume the values of :positive, :negative
-and :external for consumption by \"key\".
+transform-ast sets but does not consume the values of :positive,
+:negative and :external for consumption by \"key\".
 
 Finally, the keyword :external indicates whether the formula being
 traversed is inside an External(...)."

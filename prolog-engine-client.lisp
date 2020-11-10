@@ -1,22 +1,36 @@
 
 (in-package #:prolog-engine-client)
 
+#|
+Default engine paths as global variables. Change these to your local paths!
+|#
+
 (defparameter *default-scryer-prolog-path*
-  "/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog")
+  #p"/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog")
 
 (defparameter *default-xsb-prolog-path*
-  "/home/mark/XSB/bin/xsb")
+  #p"/home/mark/XSB/bin/xsb")
 
 (defstruct prolog-engine-client
-  host
-  path
-  socket)
+  "A structure containing the name, path and socket of a Prolog
+server, confusingly termed a client, which actually hosts a
+server. The server compiles and loads the translated Prolog KB sent to
+it by cl-psoatransrun. It receives query strings it evaluates against
+the translated KB, and sends back answer strings."
+  (host :scryer :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
+  (path *default-scryer-prolog-path* :type pathname)
+  socket ;; Either a single bidirectional socket (Scryer) or two unidirectional sockets (XSB).
+  )
 
 (defstruct xsb-engine-socket
+  "Defines a \"socket\" for use with XSB sockets API, which supports only uni-directional
+sockets."
   read-socket
   write-socket)
 
 (defun make-engine-client (system)
+  "Configure a prolog-engine-client according to the path and socket
+value and type defaults. Sockets are initialized separately."
   (ecase system
     (:scryer (make-prolog-engine-client
               :host :scryer
@@ -27,6 +41,9 @@
            :socket (make-xsb-engine-socket)))))
 
 (defun open-socket-to-prolog (client &key port)
+  "Connect a socket to the type, based on the host type. Scryer uses
+bidirectional sockets while XSB needs two unidirectional sockets, of
+which the write socket must connect first."
   (check-type port (integer 0 65536))
   (setf (prolog-engine-client-socket client)
         (ecase (prolog-engine-client-host client)
@@ -35,6 +52,17 @@
                  :write-socket (socket-connect "127.0.0.1" port)
                  :read-socket (socket-connect "127.0.0.1" port)))))
   (prolog-engine-client-socket client))
+
+#|
+
+The generic functions out-socket-stream, in-socket-stream and
+close-socket are used in the #:psoatransrun and #:psoatransrun-tests
+packages to access and close socket streams. Their arguments are
+specialized to the socket types used by the two variants of
+prolog-engine-client, allowing functions in those packages to ignore
+client implementation details.
+
+|#
 
 (defgeneric out-socket-stream (socket))
 

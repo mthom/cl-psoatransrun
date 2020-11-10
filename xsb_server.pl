@@ -111,7 +111,7 @@ replace_char_lists_with_strings(X, Y) :-
        fmt_write_string(Y, "\"%s\"", args(X))
     ;
        X =.. [F | Args],
-       (  atom_concat('_',_, F) ->
+       (  atom_concat('_', _, F) ->
           atom_quoted(F, NewF)
        ;
           NewF = F
