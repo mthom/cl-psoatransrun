@@ -23,11 +23,12 @@ from #:psoa-transformers, and then by applying translate-document from
 #:psoa-prolog-translator.
 
 The remaining return values are the relationships hash table detailed
-in the #:psoa-transformers documentation, a boolean indicating
-whether the KB is relational, and a hash table linking prefix
-namespaces to URLs."
+in the #:psoa-transformers documentation, a boolean indicating whether
+the KB is relational, a hash table linking prefix namespaces to URLs,
+and the original, untransformed ruleml-document AST."
   (check-type document string) ;; document is a string.
-  (let ((document (transform-document (parse 'psoa-grammar::ruleml document))))
+  (let* ((original-document (parse 'psoa-grammar::ruleml document))
+         (document (transform-document original-document)))
     ;; document is now of type ruleml-document.
     (check-type document ruleml-document)
     (multiple-value-bind (prolog-kb-string relationships is-relational-p)
@@ -35,14 +36,37 @@ namespaces to URLs."
       (values prolog-kb-string
               relationships
               is-relational-p
-              (ruleml-document-prefix-ht document)))))
+              (ruleml-document-prefix-ht document)
+              original-document))))
 
-(defun psoa-query->prolog (query prefix-ht relationships)
+(defun psoa-query->prolog (query-string prefix-ht relationships)
   "Translate a ruleml-query value \"query\" to a Prolog query string,
 similarly to the execution path of psoa-document->prolog."
-  (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query))
-      (transform-query relationships prefix-ht)
-      (translate-query prefix-ht)))
+  (flet ((recompile-for-relational-query (query-ast)
+           ;; If the KB is relational but query is not, we should try
+           ;; to recompile the KB non-relationally, but only if the
+           ;; caller of psoa-query->prolog has set up an appropriate
+           ;; context in which it can perform the re-compilation for
+           ;; us.
+           ;;
+           ;; That is what the form (find-restart
+           ;; 'recompile-non-relationally) detects. If no such context
+           ;; exists, it evaluates to NIL and execution of
+           ;; psoa-query->prolog continues as it normally
+           ;; would. Otherwise, control is transferred to the
+           ;; nearest restart labeled recompile-non-relationally,
+           ;; passing query-string as its sole argument.  Depending on
+           ;; the binding of the restart, the call stack may be
+           ;; unwound.
+           (when (and *is-relational-p* (not (is-relational-query-p query-ast prefix-ht)))
+             (let ((recompile-restart (find-restart 'recompile-non-relationally)))
+               (when recompile-restart
+                 (invoke-restart recompile-restart query-string))))
+           query-ast))
+    (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query-string))
+        recompile-for-relational-query
+        (transform-query relationships prefix-ht)
+        (translate-query prefix-ht))))
 
 (defun trim-solution-string (solution-string)
   "Some logic engine backends format strings with enclosing
@@ -100,38 +124,42 @@ solution on a separate line."
                (terpri)
                (read-char))))
 
-(defun psoa-repl (engine-socket prefix-ht
+(defun psoa-repl (engine-client prefix-ht
                   &optional (relationships (make-hash-table :test #'equalp)))
   "-psoa-repl contains the proper REPL, while this function catches
 and prints diagnostic errors thrown during parsing. After parse errors
 are caught and processed, the REPL resumes."
-  (loop (handler-case (-psoa-repl engine-socket prefix-ht relationships)
+  (loop (handler-case (-psoa-repl engine-client prefix-ht relationships)
           (esrap:esrap-parse-error (condition)
             (format t "Parse error at ~A at position ~D~%"
                     (esrap:esrap-error-text condition)
                     (esrap:esrap-error-position condition))))))
 
-(defun -psoa-repl (engine-socket prefix-ht relationships)
+(defun -psoa-repl (engine-client prefix-ht relationships)
   "This function encapsulates a loop: read a query as a single line
 from standard input, translate the query to a Prolog query string,
 send it along to the engine, gather and print the solutions."
-  (loop for line = (progn (write-string "> ")
-                          (read-line *standard-input* nil))
+  (loop for line = (let ((line (dequeue-query engine-client)))
+                     (if line
+                         line
+                         (progn (write-string "> ")
+                                (read-line *standard-input* nil))))
         if line do (print-solutions (send-query-to-prolog-engine
-                                     engine-socket line
+                                     engine-client line
                                      prefix-ht relationships))))
 
-(defun send-query-to-prolog-engine (engine-socket query-string prefix-ht relationships)
+(defun send-query-to-prolog-engine (engine-client query-string prefix-ht relationships)
   "Translate the PSOA RuleML query string \"query-string\" to its
 Prolog equivalent, and send it out to the engine using its output
 socket. Read and collect the solution sets from the engine's output
 socket."
-  (multiple-value-bind (query-string toplevel-var-string)
-      (psoa-query->prolog query-string prefix-ht relationships)
-    (write-line query-string (out-socket-stream engine-socket))
-    (write-line toplevel-var-string (out-socket-stream engine-socket))
-    (force-output (out-socket-stream engine-socket))
-    (read-and-collect-solutions (in-socket-stream engine-socket))))
+  (let ((engine-socket (prolog-engine-client-socket engine-client)))
+    (multiple-value-bind (query-string toplevel-var-string)
+        (psoa-query->prolog query-string prefix-ht relationships)
+      (write-line query-string (out-socket-stream engine-socket))
+      (write-line toplevel-var-string (out-socket-stream engine-socket))
+      (force-output (out-socket-stream engine-socket))
+      (read-and-collect-solutions (in-socket-stream engine-socket)))))
 
 (defun init-prolog-process (prolog-kb-string process &key system)
   "Load the translated Prolog KB into the Prolog engine backend by
@@ -165,6 +193,7 @@ the process input and output streams."
   (finish-output (out-socket-stream (prolog-engine-client-socket engine-client)))
 
   (close-socket (prolog-engine-client-socket engine-client))
+  (reset-engine-socket engine-client)
 
   (write-line "halt." (sb-ext:process-input process))
   (finish-output (sb-ext:process-input process))
@@ -228,16 +257,43 @@ and launch the REPL.
 
 Upon abort or any other unresolvable error, execute quit-prolog-engine
 to close the process."
-  (multiple-value-bind (prolog-kb-string relationships is-relational-p prefix-ht)
+  (multiple-value-bind (prolog-kb-string relationships is-relational-p
+                        prefix-ht document)
       (psoa-document->prolog document :system (prolog-engine-client-host engine-client))
-    (let* ((process (start-prolog-process engine-client)))
 
-      (format t "The translated KB:~%~%~A" prolog-kb-string)
-      (init-prolog-process prolog-kb-string process
-                           :system (prolog-engine-client-host engine-client))
+    (loop
+      (let ((*is-relational-p* is-relational-p))
+        (restart-case
+            (let* ((process (start-prolog-process engine-client)))
 
-      (let ((engine-socket (connect-to-prolog-process engine-client process)))
-        (unwind-protect
-             (let ((*is-relational-p* is-relational-p))
-               (psoa-repl engine-socket prefix-ht relationships))
-          (quit-prolog-engine process engine-client))))))
+              (format t "The translated KB:~%~%~A" prolog-kb-string)
+
+              (init-prolog-process prolog-kb-string process
+                                   :system (prolog-engine-client-host engine-client))
+
+              (connect-to-prolog-process engine-client process)
+
+              (unwind-protect
+                   ;; If a call beneath psoa-repl invokes the recompile-non-relationally
+                   ;; restart, the stack is unwound, resulting in this unwind-protect
+                   ;; evaluating the (quit-prolog-engine ...) form before passing
+                   ;; control to the restart.
+                   (psoa-repl engine-client prefix-ht relationships)
+                (quit-prolog-engine process engine-client)))
+
+          (recompile-non-relationally (instigating-query-string)
+            ;; A non-relational query (here, instigating-query-string) can prompt
+            ;; a non-relational re-compilation of the KB. That's precisely
+            ;; what is done here, using the recompile-document-non-relationally
+            ;; transform of #:psoa-transformers.
+            (multiple-value-setq (prolog-kb-string relationships is-relational-p)
+              (translate-document (recompile-document-non-relationally document)
+                                  :system (prolog-engine-client-host engine-client)))
+
+            ;; *is-relational-p* must be bound to NIL when we are done here.
+            ;; Raise an error if this is not so.
+            (assert (not is-relational-p))
+
+            ;; enqueue the instigating query for execution as soon as the Prolog
+            ;; server is restarted with the re-compiled KB.
+            (enqueue-query engine-client instigating-query-string)))))))

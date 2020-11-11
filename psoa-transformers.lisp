@@ -105,7 +105,7 @@ map-atom-transformer."
   (match term
     ((or (ruleml-oidful-atom) (ruleml-membership) (ruleml-atom) (ruleml-expr))
      (apply transformer term args))
-    (_ (apply #'transform-ast term transformer
+    (_ (apply #'transform-ast term (lambda (term &key &allow-other-keys) term)
               :propagator (lambda (term &rest args &key &allow-other-keys)
                             (apply #'map-atom-transformer transformer term args))
               args))))
@@ -370,6 +370,15 @@ called in the context of a KB atom."
          (return-from is-relationship-p nil))
   t)
 
+(defun is-relational-query-p (query prefix-ht)
+  "t iff query contains non-relational atoms."
+  (map-atom-transformer (lambda (term &key &allow-other-keys)
+                          (if (is-relationship-p term prefix-ht)
+                              term
+                              (return-from is-relational-query-p nil)))
+                        query)
+  t)
+
 (defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
   "In the default static/dynamic objectification transformation,
 top-level KB and query atoms are sometimes deferred from
@@ -390,11 +399,11 @@ predicates."
                         (or (ruleml-slot-p term)
                             (not (ruleml-tuple-dep term))))
                       descriptors)
-                (make-ruleml-or))  ;; The atom is not a relational predicate call. Replace it with Or().
+                (make-ruleml-or)) ;; The atom is not a relational predicate call. Replace it with Or().
                (t
-                (let ((oid (fresh-variable)))  ;; The atom is relational, but doesn't pertain to
-                  (make-ruleml-exists          ;; a relational predicate call. Objectify it and
-                   :vars (list oid)            ;; wrap it in an Exists ?o (...). Invoke objectify-dynamic
+                (let ((oid (fresh-variable))) ;; The atom is relational, but doesn't pertain to
+                  (make-ruleml-exists ;; a relational predicate call. Objectify it and
+                   :vars (list oid) ;; wrap it in an Exists ?o (...). Invoke objectify-dynamic
                    :formula (objectify-dynamic ;; on the oidful atom just obtained.
                              (make-ruleml-oidful-atom :oid oid :predicate term)
                              relationships
@@ -409,9 +418,9 @@ predicates."
                             (or (ruleml-slot-p term)
                                 (not (ruleml-tuple-dep term))))
                           descriptors))
-                (make-ruleml-or))  ;; Replace it with Or().
+                (make-ruleml-or)) ;; Replace it with Or().
                (t ;; Unify the variable OID of term to a function term
-                  ;; OID confabulated by make-oid-cons.
+                ;; OID confabulated by make-oid-cons.
                 (make-ruleml-and :terms
                                  (loop for tuple in descriptors
                                        for terms = (ruleml-tuple-terms tuple)
@@ -980,6 +989,51 @@ prefix-ht hash tables."
                     (transform-query term relationships prefix-ht)))
                  (_ term)))
              (ruleml-document-performatives document)))))
+
+
+(defun recompile-document-non-relationally (document)
+  "\"document\" represents an untransformed ruleml-document, parsed
+from a previous string KB. It was compiled then as a purely relational
+KB, but a non-relational query has prompted its re-compilation as a
+non-relational KB, which is done in this function."
+  (make-ruleml-document
+   :base (ruleml-document-base document)
+   :prefixes (ruleml-document-prefixes document)
+   :prefix-ht (ruleml-document-prefix-ht document)
+   :imports (ruleml-document-imports document)
+   :performatives
+   (mapcar (lambda (term)
+             (match term
+               ((ruleml-assert :items items)
+                (let ((first-stage-items (mapcar #`(-> (subclass-rewrite %)
+                                                       embedded-objectify
+                                                       unnest)
+                                                 items)))
+                  ;; new relationships are compiled once more,
+                  ;; but *is-relational-p* is now NIL.
+                  (multiple-value-bind (relationships is-relational-p)
+                      (kb-relationships (make-ruleml-assert :items first-stage-items)
+                                        (ruleml-document-prefix-ht document))
+                    (declare (ignore is-relational-p))
+                    (let ((*is-relational-p* nil))
+                      ;; Binding the *is-relational-p* special variable for use by
+                      ;; objectify and subsequent transformations.
+                      (make-ruleml-assert
+                       :items (mapcan #`(-> (objectify % relationships
+                                                       (ruleml-document-prefix-ht document))
+                                            skolemize
+                                            flatten-externals
+                                            separate-existential-variables
+                                            describute
+                                            split-conjuctive-conclusion)
+                                      first-stage-items)
+                       :relationships relationships
+                       :is-relational-p nil)))))
+               ((ruleml-query)
+                (let ((relationships (make-hash-table :test #'equal)))
+                  (transform-query term relationships (ruleml-document-prefix-ht document))))
+               (_ term)))
+           (ruleml-document-performatives document))))
 
 
 (defun transform-query (query relationships prefix-ht)

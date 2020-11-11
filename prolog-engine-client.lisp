@@ -19,6 +19,7 @@ it by cl-psoatransrun. It receives query strings it evaluates against
 the translated KB, and sends back answer strings."
   (host :scryer :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
   (path *default-scryer-prolog-path* :type pathname)
+  (pending-query nil :type (or null string)) ;; A pending query, i.e., one that prompted a KB recompilation.
   socket ;; Either a single bidirectional socket (Scryer) or two unidirectional sockets (XSB).
   )
 
@@ -39,6 +40,22 @@ value and type defaults. Sockets are initialized separately."
            :host :xsb
            :path *default-xsb-prolog-path*
            :socket (make-xsb-engine-socket)))))
+
+(defun reset-engine-socket (engine-client)
+  "Reset the Prolog engine socket slot, whose type is dictated by the
+value of system."
+  (setf (prolog-engine-client-socket engine-client)
+        (ecase (prolog-engine-client-host engine-client)
+          (:scryer nil)
+          (:xsb (make-xsb-engine-socket)))))
+
+(defun enqueue-query (engine-client query-string)
+  (setf (prolog-engine-client-pending-query engine-client)
+        query-string))
+
+(defun dequeue-query (engine-client)
+  (prog1 (prolog-engine-client-pending-query engine-client)
+    (enqueue-query engine-client nil)))
 
 (defun open-socket-to-prolog (client &key port)
   "Connect a socket to the type, based on the host type. Scryer uses

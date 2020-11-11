@@ -71,8 +71,7 @@ set-exclusive-or."
 engine client, get back the answers, and compare them with the answers
 expected by the test case in the corresponding answer file. Print a
 message when a query fails."
-  (let ((engine-socket (prolog-engine-client-socket engine-client))
-        (*all-solutions* t))
+  (let ((*all-solutions* t))
     (loop for n upfrom 1
           for query-file-pathname = (query-pathname subdirectory n)
           for answer-file-pathname = (answer-pathname subdirectory n)
@@ -86,7 +85,7 @@ message when a query fails."
                         (make-string-input-stream answer-batch)
                         'psoa-grammar::formula-list)
                        (send-query-to-prolog-engine
-                        engine-socket
+                        engine-client
                         query-string
                         prefix-ht
                         relationships))

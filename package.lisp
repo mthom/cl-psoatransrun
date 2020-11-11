@@ -157,8 +157,13 @@
 
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
-  (:export #:make-url-const #:transform-document #:transform-query
-           #:*is-relational-p*  #:*static-objectification-only*)
+  (:export #:*static-objectification-only*
+           #:*is-relational-p*
+           #:is-relational-query-p
+           #:make-url-const
+           #:recompile-document-non-relationally
+           #:transform-document
+           #:transform-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-prolog-translator
@@ -169,13 +174,16 @@
 (defpackage #:prolog-engine-client
   (:use #:cl #:usocket)
   (:export #:close-socket
+           #:dequeue-query
+           #:enqueue-query
            #:make-engine-client
            #:open-socket-to-prolog
            #:prolog-engine-client-path
            #:prolog-engine-client-host
            #:prolog-engine-client-socket
            #:in-socket-stream
-           #:out-socket-stream))
+           #:out-socket-stream
+           #:reset-engine-socket))
 
 (defpackage #:psoatransrun
   (:use #:cl #:prolog-engine-client #:psoa-ast
