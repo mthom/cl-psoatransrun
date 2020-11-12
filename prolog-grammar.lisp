@@ -54,7 +54,7 @@ pretty printer defined in #:psoa-pprint.
         (list arg))))
 
 (defrule prolog-symbol
-    (or quoted-prolog-symbol standard-prolog-symbol string numeric-literal))
+    (or psoa-grammar::const-short quoted-prolog-symbol standard-prolog-symbol))
 
 (defrule string
     psoa-grammar::unicode-string)
@@ -73,11 +73,11 @@ pretty printer defined in #:psoa-pprint.
 
 (defrule quoted-prolog-symbol
     (and #\'
-         (* (not #\'))
+         (or psoa-grammar::const-short standard-prolog-symbol)
          #\')
-  (:destructure (q1 chars q2)
+  (:destructure (q1 const q2)
     (declare (ignore q1 q2))
-    (make-ruleml-const :contents (concatenate 'string chars))))
+    const))
 
 (defrule arg
     (or var goal))

@@ -48,15 +48,16 @@ predicate declarations whose clauses are listed contiguously."
                       for pred-ind in predicate-indicators
                       if (and line pred-ind)
                         collect (cons line pred-ind))))
-    (remove-duplicates
-     (mapcar #'car
-             (sort lines (lambda (p1 p2)
-                           ;; Sort lexicographically by predicate indicator.
-                           (or (string< (car p1) (car p2))
-                               (and (<= (cdr p1) (cdr p2))
-                                    (string= (car p1) (car p2)))))
-                   :key #'cdr))
-     :test #'equal)))
+    (nreverse
+     (remove-duplicates
+      (mapcar #'car
+              (sort lines (lambda (p1 p2)
+                            ;; Sort lexicographically by predicate indicator.
+                            (or (string< (car p1) (car p2))
+                                (and (<= (cdr p1) (cdr p2))
+                                     (string= (car p1) (car p2)))))
+                    :key #'cdr))
+      :test #'equal))))
 
 
 (defun translate-document (document &key system)

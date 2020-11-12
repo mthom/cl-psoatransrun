@@ -621,13 +621,13 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule pname-ln
     (and pname-ns pn-local)
   (:destructure (ns local &bounds start)
-                (make-ruleml-pname-ln :name ns :url local :position start)))
+    (make-ruleml-pname-ln :name ns :url local :position start)))
 
 (defrule pname-ns
     (and (? pn-prefix) #\:)
   (:destructure (pn-prefix colon)
-                (declare (ignore colon))
-                pn-prefix))
+    (declare (ignore colon))
+    pn-prefix))
 
 (defrule name nc-name)
 

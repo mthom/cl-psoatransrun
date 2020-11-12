@@ -16,7 +16,6 @@
                   socket_connect/4,
                   socket_close/2,
                   socket_listen/3]).
-
 :- use_module(string, [term_to_codes/3]).
 
 xsb_port(6020). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
@@ -49,7 +48,7 @@ eval_loop(InStream, OutStream) :-
        split_vars(VNNames, UVNNames, RVNNames),
        catch(call(Term), _, false),
        compile_solution_string(RVNNames, VarString),
-       (  VarString == "" ->
+       (  ( var(VarString) ; VarString == "" ) ->
           file_write_string(OutStream, "Yes")
        ;
           file_write_string(OutStream, VarString)
@@ -80,13 +79,17 @@ compile_solution_string(VNs, VarString) :-
     compile_solution_string_(VNs, "", VarString).
 
 compile_solution_string_([], VarString, VarString).
-compile_solution_string_([VN|VNs], PrefixString, VarString) :-
-    replace_char_lists_with_strings(VN, RVN),
-    term_to_codes(RVN, [quoted(false), ignore_ops(true)], Codes),
-    (  PrefixString == "" ->
-       fmt_write_string(VarString0, "%s", args(Codes))
+compile_solution_string_([VN=Value|VNs], PrefixString, VarString) :-
+    (  var(Value) ->
+       true
     ;
+       replace_char_lists_with_strings(VN=Value, VN=Y),
+       term_to_codes(VN=Y, [quoted(false), ignore_ops(true)], Codes),
+       (  PrefixString == "" ->
+          fmt_write_string(VarString0, "%s", args(Codes))
+       ;
        fmt_write_string(VarString0, "%s, %s", args(PrefixString, Codes))
+       )
     ),
     compile_solution_string_(VNs, VarString0, VarString).
 
@@ -100,29 +103,33 @@ atom_quoted(Atom, NewAtom) :-
     atom_concat('\'', Atom, NewAtom0),
     atom_concat(NewAtom0, '\'', NewAtom).
 
-replace_char_lists_with_strings(X, Y) :-
+replace_char_lists_with_strings(VN=X, VN=Y) :-
+    (  var(X) ->
+       Y = VN
+    ;
+       replace_char_lists_with_strings_(X, Y)
+    ).
+
+replace_char_lists_with_strings_(X, Y) :-
     (  number(X) ->
        X = Y
     ;  atom(X) ->
-       (  atom_concat('_', _, X) | atom_concat('<', _, X) ->
+       (  ( atom_concat('_', _, X) ; atom_concat('<', _, X) ) ->
           fmt_write_string(Y, "'%s'", args(X))
        ;
           fmt_write_string(Y, "%s", args(X))
        )
-    ;  var(X) ->
-       Y = X
     ;  is_charlist(X) ->
        fmt_write_string(Y, "\"%s\"", args(X))
     ;
        X =.. [F | Args],
-       (  atom_concat('_', _, F) ->
+       (  ( atom_concat('_', _, F) ; atom_concat('<', _, F) ) ->
           atom_quoted(F, NewF)
        ;
           NewF = F
        ),
-       maplist(replace_char_lists_with_strings, Args, NewArgs),
+       maplist(replace_char_lists_with_strings_, Args, NewArgs),
        Y =.. [NewF | NewArgs]
     ).
 
 :- initialization(start_server).
-

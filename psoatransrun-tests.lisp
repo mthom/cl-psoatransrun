@@ -48,7 +48,7 @@ appending \"-KB.psoa\" to produce a filename."
   "Answer sets are are either strings or lists of PSOA RuleML AST nodes.
 To be equal, \"answer-set-1\" and \"answer-set-2\" must share one of
 these types. If they are both strings, they are checked for equality.
-If they are both lists of AST nodes, their are pretty printed to
+If they are both lists of AST nodes, they are pretty printed to
 strings and checked for equality modulo list ordering via the function
 set-exclusive-or."
   (cond
@@ -58,12 +58,13 @@ set-exclusive-or."
      (not (set-exclusive-or (mapcar #`(format nil "~A" %) answer-set-1)
                             (mapcar #`(format nil "~A" %) answer-set-2)
                             :test #'string=)))
-    (t
-     nil)))
+     (t
+      nil)))
 
 (defun answers-match-p (expected-answers reported-answers)
   "Two answers set match iff all their corresponding answer sets match."
-  (every #'equal-answer-set-p expected-answers reported-answers))
+  (not (set-exclusive-or expected-answers reported-answers
+                         :test #'equal-answer-set-p)))
 
 (defun run-test-case (test-kb-filename subdirectory engine-client
                       prefix-ht relationships)
