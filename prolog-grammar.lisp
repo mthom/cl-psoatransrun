@@ -19,9 +19,10 @@ pretty printer defined in #:psoa-pprint.
 (defrule goal-sequence
     (and goal
          (* whitespace)
-         (? (and #\, (* whitespace) goal-sequence)))
-  (:destructure (goal ws goals)
-    (declare (ignore ws))
+         (? (and #\, (* whitespace) goal-sequence))
+         (* whitespace))
+  (:destructure (goal ws1 goals ws2)
+    (declare (ignore ws1 ws2))
     (if goals
         (psoa-transformers::flatten-and (make-ruleml-and :terms (cons goal (cddr goals))))
         (list goal))))

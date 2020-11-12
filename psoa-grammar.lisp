@@ -824,7 +824,7 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
     (- double)))
 
 (defrule whitespace
-    (+ (or #\Space #\Tab #\Newline (and #\Return #\Newline)))
+    (+ (or #\Space #\Tab #\Newline #\Return (and #\Return #\Newline)))
   (:constant nil))
 
 (defrule plus-sign

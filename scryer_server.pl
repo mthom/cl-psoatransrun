@@ -18,6 +18,7 @@ start_server :-
     nl, write(Port), nl,
     socket_server_accept(ServerSocket, _, Stream, [eof_action(eof_code)]),
     eval_loop(Stream),
+    close(Stream),
     socket_server_close(ServerSocket).
 
 

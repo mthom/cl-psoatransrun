@@ -91,9 +91,10 @@ message when a query fails."
                         relationships))
                     (format t "Query ~D of ~A failed!~%"
                             n (file-namestring test-kb-filename)))
-                (esrap:esrap-parse-error ()
-                  (format t "Parse error in query file ~A~%"
-                          (file-namestring query-file-pathname)))))
+                (esrap:esrap-parse-error (condition)
+                  (format t "Parse error at \"~A\" at position ~D~%"
+                          (esrap:esrap-error-text condition)
+                          (esrap:esrap-error-position condition)))))
           else do
             (format t "Finished testing ~A~%~%"
                     (file-namestring test-kb-filename))

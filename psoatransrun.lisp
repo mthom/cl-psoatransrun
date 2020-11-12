@@ -53,10 +53,11 @@ similarly to the execution path of psoa-document->prolog."
            ;; 'recompile-non-relationally) detects. If no such context
            ;; exists, it evaluates to NIL and execution of
            ;; psoa-query->prolog continues as it normally
-           ;; would. Otherwise, control is transferred to the
-           ;; nearest restart labeled recompile-non-relationally,
-           ;; passing query-string as its sole argument.  Depending on
-           ;; the binding of the restart, the call stack may be
+           ;; would. Otherwise, control is transferred to the nearest
+           ;; restart named recompile-non-relationally, passing
+           ;; query-string as its sole argument. Depending on the
+           ;; establishment of the restart in the caller (via, i.e.,
+           ;; restart-bind or restart-case), the call stack may be
            ;; unwound.
            (when (and *is-relational-p* (not (is-relational-query-p query-ast prefix-ht)))
              (let ((recompile-restart (find-restart 'recompile-non-relationally)))
@@ -171,9 +172,11 @@ is begun by an :- initialization(...) directive."
                           (:xsb . "xsb_server.pl"))))
     ;; Compile the PSOA document in the engine.
     (write-line "[user]." process-input-stream)
+    (finish-output process-input-stream)
+
     (write-line prolog-kb-string process-input-stream)
     (write-line "end_of_file." process-input-stream)
-    (force-output process-input-stream)
+    (finish-output process-input-stream)
 
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
@@ -181,7 +184,7 @@ is begun by an :- initialization(...) directive."
     (write-string "/home/mark/Projects/CL/PSOATransRun/" process-input-stream)
     (write-string (cdr (assoc system system-servers)) process-input-stream)
     (write-line   "')." process-input-stream)
-    (force-output process-input-stream)))
+    (finish-output process-input-stream)))
 
 
 (defun quit-prolog-engine (process engine-client)
@@ -198,11 +201,11 @@ the process input and output streams."
   (write-line "halt." (sb-ext:process-input process))
   (finish-output (sb-ext:process-input process))
 
-  (close (sb-ext:process-input process) :abort t)
-  (close (sb-ext:process-output process) :abort t)
-
   (sb-ext:process-wait process)
-  (sb-ext:process-close process))
+  (sb-ext:process-close process)
+
+  (close (sb-ext:process-input process) :abort t)
+  (close (sb-ext:process-output process) :abort t))
 
 
 (defun connect-to-prolog-process (engine-client process)
