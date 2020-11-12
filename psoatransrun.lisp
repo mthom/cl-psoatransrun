@@ -181,7 +181,8 @@ is begun by an :- initialization(...) directive."
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
     (write-string "consult('" process-input-stream)
-    (write-string "/home/mark/Projects/CL/PSOATransRun/" process-input-stream)
+    (write-string (directory-namestring (asdf:system-source-directory "psoatransrun"))
+                  process-input-stream)
     (write-string (cdr (assoc system system-servers)) process-input-stream)
     (write-line   "')." process-input-stream)
     (finish-output process-input-stream)))
