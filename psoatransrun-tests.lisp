@@ -108,7 +108,8 @@ from the \"system\" keyword for each test case in
 types as notifications to the screen, but don't allow them to prevent
 further tests."
   (let ((subdirectories (list-subdirectories *test-suite-directory*))
-        (engine-client (make-engine-client system)))
+        (engine-client (make-engine-client system))
+        (psoa-pprint::*print-caret-before-expr* nil))
     (dolist (subdirectory subdirectories)
       (let* ((test-kb-filename (kb-pathname subdirectory)))
         (when (probe-file test-kb-filename)

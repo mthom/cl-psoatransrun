@@ -18,7 +18,7 @@
                   socket_listen/3]).
 :- use_module(string, [term_to_codes/3]).
 
-xsb_port(6021). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
+xsb_port(6022). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
 
 start_server :-
     socket(Socket, 0), % socket_server_open('127.0.0.1':Port, ServerSocket),

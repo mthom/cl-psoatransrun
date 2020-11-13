@@ -24,6 +24,9 @@ https://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node253.html
   "A contextual flag / boolean indicating whether the subterms of a
 PSOA RuleML atom or expression are currently being printed.")
 
+(defparameter *print-caret-before-expr* nil
+  "A boolean indicating whether exprs outside atoms should be
+preceded by caret (^).")
 
 (defun pprint-ruleml-document (stream document)
   (pprint-logical-block (stream nil :prefix "RuleML(" :suffix ")")
@@ -148,7 +151,7 @@ PSOA RuleML atom or expression are currently being printed.")
 (set-pprint-dispatch 'ruleml-pname-ln 'pprint-ruleml-pname-ln)
 
 (defun pprint-ruleml-expr (stream expr)
-  (unless *inside-psoa-rest*
+  (unless (or *inside-psoa-rest* (not *print-caret-before-expr*))
     (write-char #\^ stream))
   (write (ruleml-expr-root expr) :stream stream)
   (pprint-logical-block (stream nil :prefix "(" :suffix ")")
