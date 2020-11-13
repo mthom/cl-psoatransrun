@@ -285,8 +285,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          term)
   (:destructure (subclass ws1 subclass-rel ws2 superclass &bounds start)
-                (declare (ignore ws1 subclass-rel ws2))
-                (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))
+    (declare (ignore ws1 subclass-rel ws2))
+    (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))
 
 (defrule psoa
     (or atom expr))
@@ -297,10 +297,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (! (or #\# whitespace comment))
          atom-oidless-short)
   (:destructure (oid hash not-hash atom &bounds start)
-                (declare (ignore hash not-hash))
-                (if (ruleml-atom-p atom)
-                    (make-ruleml-oidful-atom :oid oid :predicate atom :position start)
-                    (make-ruleml-membership :oid oid :predicate atom :position start))))
+    (declare (ignore hash not-hash))
+    (if (ruleml-atom-p atom)
+        (make-ruleml-oidful-atom :oid oid :predicate atom :position start)
+        (make-ruleml-membership :oid oid :predicate atom :position start))))
 
 (defrule atom-oidless
     (or atom-oidless-short atom-oidless-long))
@@ -308,24 +308,22 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule atom-oidless-short
     (and term (? psoa-rest))
   (:destructure (root descriptors &bounds start)
-                (let ((descriptors (remove nil descriptors)))
-                  (if (null descriptors)
-                      root
-                      (make-ruleml-atom :root root
-                                        :descriptors descriptors
-                                        :position start)))))
+    (let ((descriptors (remove nil descriptors)))
+      (make-ruleml-atom :root root
+                        :descriptors descriptors
+                        :position start))))
 
 (defrule atom-oidless-long
     (and #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
   (:destructure (hash not-hash atom-oidless-short &bounds start)
-                (declare (ignore hash not-hash))
-                (if (ruleml-atom-p atom-oidless-short)
-                    atom-oidless-short
-                    (make-ruleml-atom :root atom-oidless-short
-                                      :descriptors nil
-                                      :position start))))
+    (declare (ignore hash not-hash))
+    (if (ruleml-atom-p atom-oidless-short)
+        atom-oidless-short
+        (make-ruleml-atom :root atom-oidless-short
+                          :descriptors nil
+                          :position start))))
 
 (define-condition implicit-and-explicit-tuples-in-same-atom (error)
   ((descriptors-position :initarg :descriptors-position)
@@ -390,18 +388,18 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          #\))
   (:destructure (lparen ws1 descriptors ws2 rparen &bounds start)
-                (declare (ignore ws1 lparen ws2 rparen))
-                (check-descriptors (remove nil descriptors) (1+ start))))
+    (declare (ignore ws1 lparen ws2 rparen))
+    (check-descriptors (remove nil descriptors) (1+ start))))
 
 (defrule psoa-rest-list
     (and (or slot-di tuple-di subterm)
          (* (or whitespace comment))
          (or (& ")") psoa-rest-list))
   (:destructure (subterm ws rest)
-                (declare (ignore ws))
-                (if (listp rest)
-                    (cons subterm (remove nil rest))
-                    (list subterm))))
+    (declare (ignore ws))
+    (if (listp rest)
+        (cons subterm (remove nil rest))
+        (list subterm))))
 
 (defrule expr
     (or expr-short expr-long))
