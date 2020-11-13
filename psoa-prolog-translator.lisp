@@ -174,9 +174,8 @@ predicate-indicator cell to be written."
                    ((ruleml-oidful-atom
                      :oid oid
                      :predicate (ruleml-atom :root (ruleml-const :contents "Top")
-                                             :descriptors (list (ruleml-tuple :dep nil
-                                                                              :terms terms))))
-                    ;; This is an oidful atom with an independent
+                                             :descriptors (list (ruleml-tuple :terms terms))))
+                    ;; This is an oidful atom with a single (either dependent or independent!)
                     ;; descriptor, hence we use "tupterm", that
                     ;; contains just the OID and however many
                     ;; arguments are in the tuple. We should record
@@ -208,8 +207,7 @@ predicate-indicator cell to be written."
                    ((ruleml-oidful-atom
                      :oid oid
                      :predicate (ruleml-atom :root (ruleml-const :contents "Top")
-                                             :descriptors (list (ruleml-slot :dep nil
-                                                                             :name name
+                                             :descriptors (list (ruleml-slot :name name
                                                                              :filler filler))))
                     (record-predicate-indicator "sloterm" 3 recordp)
                     (format stream "sloterm(~A, ~A, ~A)"
