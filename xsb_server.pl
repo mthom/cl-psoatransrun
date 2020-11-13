@@ -18,7 +18,7 @@
                   socket_listen/3]).
 :- use_module(string, [term_to_codes/3]).
 
-xsb_port(6020). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
+xsb_port(6021). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
 
 start_server :-
     socket(Socket, 0), % socket_server_open('127.0.0.1':Port, ServerSocket),
@@ -88,7 +88,7 @@ compile_solution_string_([VN=Value|VNs], PrefixString, VarString) :-
        (  PrefixString == "" ->
           fmt_write_string(VarString0, "%s", args(Codes))
        ;
-       fmt_write_string(VarString0, "%s, %s", args(PrefixString, Codes))
+          fmt_write_string(VarString0, "%s, %s", args(PrefixString, Codes))
        )
     ),
     compile_solution_string_(VNs, VarString0, VarString).
@@ -129,6 +129,7 @@ replace_char_lists_with_strings_(X, Y) :-
           NewF = F
        ),
        maplist(replace_char_lists_with_strings_, Args, NewArgs),
+       !,
        Y =.. [NewF | NewArgs]
     ).
 

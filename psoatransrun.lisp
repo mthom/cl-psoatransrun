@@ -101,10 +101,8 @@ which demands a different grammar to be parsed."
         else if (equalp solution "No")
                collect "no" into solutions
                and do (return solutions)
-        else if (equalp solution "Yes") do
-          (read-line stream nil nil)
-             and collect "yes" into solutions
-             and do (return solutions)
+        else if (equalp solution "Yes")
+               collect "yes" into solutions
         else collect
              (parse grammar (trim-solution-string solution))
           into solutions))
@@ -118,8 +116,10 @@ solution on a separate line."
         do (match solution
              ((type list)
               (format t "~{~A~^ ~}" solution))
-             ((or "no" "yes")
-              (format t "~A~%" solution)
+             ("yes"
+              (format t "yes~%"))
+             ("no"
+              (format t "no~%")
               (return)))
            (if *all-solutions*
                (terpri)
