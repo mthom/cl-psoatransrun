@@ -18,7 +18,7 @@
                   socket_listen/3]).
 :- use_module(string, [term_to_codes/3]).
 
-xsb_port(6022). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
+xsb_port(6020). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
 
 start_server :-
     socket(Socket, 0), % socket_server_open('127.0.0.1':Port, ServerSocket),
@@ -33,11 +33,11 @@ start_server :-
     socket_accept(Socket, OutSocket, _),
     fd2ioport(OutSocket, OutStream),
     eval_loop(InStream, OutStream),
-    socket_close(Socket, _), % socket_server_close(ServerSocket).
+    file_close(InStream),
+    file_close(OutStream),
     socket_close(InSocket, _),
     socket_close(OutSocket, _),
-    file_close(InStream),
-    file_close(OutStream).
+    socket_close(Socket, _). % socket_server_close(ServerSocket)..
 
 eval_loop(InStream, OutStream) :-
     read_term(InStream, Term, [variable_names(VNNames)]),

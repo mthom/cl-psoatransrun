@@ -4,7 +4,7 @@
   :license "BSD-3"
   :version "0.9"
   :serial t
-  :depends-on (#:esrap #:pathname-utils #:rutils #:trivia #:usocket)
+  :depends-on (#:drakma #:esrap #:pathname-utils #:rutils #:trivia #:usocket)
   :components ((:file "package")
                (:file "prolog-engine-client")
                (:file "prolog-grammar")

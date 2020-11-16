@@ -186,7 +186,7 @@
            #:reset-engine-socket))
 
 (defpackage #:psoatransrun
-  (:use #:cl #:prolog-engine-client #:psoa-ast
+  (:use #:cl #:drakma #:prolog-engine-client #:psoa-ast
         #:psoa-grammar #:psoa-transformers #:psoa-prolog-translator
         #:rutils #:trivia #:usocket)
   (:export #:*all-solutions*
