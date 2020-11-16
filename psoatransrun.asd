@@ -1,5 +1,5 @@
 (asdf:defsystem #:psoatransrun
-  :description "A CL implementation of PSOATransRun, an implementation of the PSOA RuleML data and rule language."
+  :description "A CL implementation of PSOATransRun, realizing the PSOA RuleML data and rule language."
   :author "Mark Thom"
   :license "BSD-3"
   :version "0.9"
