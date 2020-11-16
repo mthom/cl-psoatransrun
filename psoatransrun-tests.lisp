@@ -101,7 +101,7 @@ message when a query fails."
                     (file-namestring test-kb-filename))
             (throw 'continue nil))))
 
-(defun run-test-suite (&key (system :scryer))
+(defun run-test-suite (&key (system :xsb))
   "Create and destroy a fresh instance of the Prolog engine derived
 from the \"system\" keyword for each test case in
 *test-suite-directory*. For now, print parse errors and other error

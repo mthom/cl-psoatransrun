@@ -239,7 +239,7 @@ Lisp implementations."
                       :output :stream
                       :wait nil))
 
-(defun psoa-load-and-repl (document &key (system :scryer))
+(defun psoa-load-and-repl (document &key (system :xsb))
   "Try to find the executable of the Prolog backend in the filesystem,
 with user assistance if necessary. Once done, enter -psoa-load-and-repl."
   (let ((engine-client (make-engine-client system)))
