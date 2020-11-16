@@ -335,7 +335,7 @@ the preceding embedded-objectify transformation."
 
 
 (defun make-oid-cons (root terms)
-  "objectify-dynamic sometimes uses this function to confabulate
+  "objectify-dynamic sometimes uses this function to Skolem-create
 function term OIDs for atoms left oidless in the KB."
   (make-ruleml-atom :root (make-ruleml-const :contents "_oid_cons")
                     :descriptors (list (make-ruleml-tuple :dep t :terms (cons root terms)))))
@@ -420,7 +420,7 @@ predicates."
                           descriptors))
                 (make-ruleml-or)) ;; Replace it with Or().
                (t ;; Unify the variable OID of term to a function term
-                ;; OID confabulated by make-oid-cons.
+                ;; OID Skolem-created by make-oid-cons.
                 (make-ruleml-and :terms
                                  (loop for tuple in descriptors
                                        for terms = (ruleml-tuple-terms tuple)
