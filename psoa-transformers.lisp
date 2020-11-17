@@ -947,38 +947,52 @@ variable names entailed by lexical scoping."
        (_ term)))))
 
 
+(defun constant-name-generator (excluded-constants)
+  "Generate the next constant in the sequence _1, _2, _3,
+   ... that hasn't been generated already and that doesn't
+   appear in \"excluded-constants.\""
+  (let ((counter 1))
+    (lambda ()
+      (loop (let ((string (format nil "_~D" counter)))
+              (incf counter)
+              (unless (or (gethash string excluded-constants)
+                          (find-symbol string))
+                (return (make-ruleml-const :contents string))))))))
+
+
+(defun rename-anonymous-constants (term name-generator)
+  "Rename anonymous constants according to the function
+  \"name-generator\"."
+  (transform-ast term
+                 (lambda (term &key &allow-other-keys)
+                   (match term
+                     ((ruleml-const :contents "_")
+                      (funcall name-generator))
+                     (_
+                      term)))))
+
 (defun rename-local-constants (term excluded-constants)
   "Rename local constants in a RuleML Assert item according to the
 convention _1, _2, ..., _N, if the names aren't already taken."
-  (let ((counter 1)
+  (let ((new-constant (constant-name-generator excluded-constants))
         (new-constant-names (make-hash-table :test #'equal)))
-    (flet ((new-constant ()
-             "Generate the next constant in the sequence _1, _2, _3,
-             ... that hasn't been generated already and that doesn't
-             appear in \"excluded-constants.\""
-             (loop (let ((string (format nil "_~D" counter)))
-                     (incf counter)
-                     (unless (or (gethash string excluded-constants)
-                                 (find-symbol string))
-                       (return-from new-constant
-                         (make-ruleml-const :contents string)))))))
-      (transform-ast
-       term
-       (lambda (term &key &allow-other-keys)
-         (match term
-           ;; Local constants are always ruleml-const values with
-           ;; string \"contents\".
-           ((guard (ruleml-const :contents contents)
-                   (stringp contents))
-            (multiple-value-bind (new-constant foundp)
-                (gethash contents new-constant-names)
-              (if foundp
-                  ;; Use the previously generated name if one is found in new-constant-names.
-                  new-constant
-                   ;; Generate a new name and index it in new-constant-names.
-                  (sethash contents new-constant-names (new-constant)))))
-           (_
-            term)))))))
+    (transform-ast
+     term
+     (lambda (term &key &allow-other-keys)
+       (match term
+         ;; Local constants are always ruleml-const values with
+         ;; string \"contents\".
+         ((guard (ruleml-const :contents contents)
+                 (stringp contents))
+          (multiple-value-bind (new-constant foundp)
+              (gethash contents new-constant-names)
+            (if foundp
+                ;; Use the previously generated name if one is found in new-constant-names.
+                new-constant
+                ;; Generate a new name and index it in new-constant-names.
+                (sethash contents new-constant-names (funcall new-constant)))))
+         (_
+          term))))))
 
 (defun fetch-psoa-url (url)
   "Fetch a PSOA KB at the URL and return it as a string."
@@ -988,13 +1002,27 @@ convention _1, _2, ..., _N, if the names aren't already taken."
   ;; convert it into a string.
   (map 'string #'code-char (drakma:http-request url)))
 
+(defun index-local-constants (term)
+  "Index the local constants of \"master-document\" in the
+  \"excluded-constants\" hash table."
+  (let ((excluded-constants (make-hash-table :test #'equal)))
+    (transform-ast
+     term
+     (lambda (term &key &allow-other-keys)
+       (match term
+         ((guard (ruleml-const :contents contents)
+                 (stringp contents))
+          (sethash contents excluded-constants t)))
+       term))
+    excluded-constants))
+
 (defun merge-and-rename (master-document imported-documents)
   "Merge the documents in the list of ruleml-documents
 \"imported-documents\" into the ruleml-document
 \"master-document\". Rename the local constants of the imported
 documents to avoid clashes with those of \"master-document\". Return
 the resulting merged document."
-  (let ((excluded-constants (make-hash-table :test #'equal))
+  (let ((excluded-constants (index-local-constants master-document))
         ;; master-document may not have an Assert performative; if
         ;; not, create one for it.
         (master-document-assert
@@ -1005,16 +1033,6 @@ the resulting merged document."
                         (ruleml-document-performatives master-document))))))
 
     (check-type master-document-assert ruleml-assert)
-
-    ;; Index the local constants of \"master-document\" in the
-    ;; \"excluded-constants\" hash table.
-    (transform-ast master-document
-                   (lambda (term &key &allow-other-keys)
-                     (match term
-                       ((guard (ruleml-const :contents contents)
-                               (stringp contents))
-                        (sethash contents excluded-constants t)))
-                     term))
 
     (dolist (imported-document imported-documents)
       ;; Rename the local constants of \"imported-document\", and merge
@@ -1058,6 +1076,8 @@ The return value is another ruleml-document instance containing the
 transformed KB in addition to newly created relationships and
 prefix-ht hash tables."
   (let* ((document (load-imports-and-merge document))
+         (local-constants (index-local-constants document))
+         (anonymous-constant-renamer (constant-name-generator local-constants))
          (prefix-ht (alist->ht (loop for prefix in (ruleml-document-prefixes document)
                                      collect (cons (ruleml-prefix-name prefix)
                                                    (ruleml-prefix-iri-ref prefix)))
@@ -1073,8 +1093,13 @@ prefix-ht hash tables."
                  ((ruleml-assert :items items)
                   ;; -> is a Common Lisp implementation of the -> threading macro of
                   ;; Clojure. Here it is a more readable, decompactified way of writing
-                  ;; (unnest (embedded-objectify (subclass-rewrite %))).
-                  (let ((first-stage-items (mapcar #`(-> (subclass-rewrite %)
+                  ;; (unnest (embedded-objectify (subclass-rewrite
+                  ;;                               (rename-anonymous-constants %
+                  ;;                                 anonymous-constant-renamer))).
+                  (let ((first-stage-items (mapcar #`(-> (rename-anonymous-constants
+                                                          %
+                                                          anonymous-constant-renamer)
+                                                         subclass-rewrite
                                                          embedded-objectify
                                                          unnest)
                                                    items)))
@@ -1110,7 +1135,9 @@ prefix-ht hash tables."
 from a previous string KB. It was compiled then as a purely relational
 KB, but a non-relational query has prompted its re-compilation as a
 non-relational KB, which is done in this function."
-  (let ((document (load-imports-and-merge document)))
+  (let* ((document (load-imports-and-merge document))
+         (local-constants (index-local-constants document))
+         (anonymous-constant-renamer (constant-name-generator local-constants)))
     (make-ruleml-document
      :base (ruleml-document-base document)
      :prefixes (ruleml-document-prefixes document)
@@ -1120,7 +1147,10 @@ non-relational KB, which is done in this function."
      (mapcar (lambda (term)
                (match term
                  ((ruleml-assert :items items)
-                  (let ((first-stage-items (mapcar #`(-> (subclass-rewrite %)
+                  (let ((first-stage-items (mapcar #`(-> (rename-anonymous-constants
+                                                          %
+                                                          anonymous-constant-renamer)
+                                                         subclass-rewrite
                                                          embedded-objectify
                                                          unnest)
                                                    items)))
