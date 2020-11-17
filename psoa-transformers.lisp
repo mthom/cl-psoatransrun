@@ -953,6 +953,9 @@ convention _1, _2, ..., _N, if the names aren't already taken."
   (let ((counter 1)
         (new-constant-names (make-hash-table :test #'equal)))
     (flet ((new-constant ()
+             "Generate the next constant in the sequence _1, _2, _3,
+             ... that hasn't been generated already and that doesn't
+             appear in \"excluded-constants.\""
              (loop (let ((string (format nil "_~D" counter)))
                      (incf counter)
                      (unless (or (gethash string excluded-constants)
@@ -963,17 +966,22 @@ convention _1, _2, ..., _N, if the names aren't already taken."
        term
        (lambda (term &key &allow-other-keys)
          (match term
+           ;; Local constants are always ruleml-const values with
+           ;; string \"contents\".
            ((guard (ruleml-const :contents contents)
                    (stringp contents))
             (multiple-value-bind (new-constant foundp)
                 (gethash contents new-constant-names)
               (if foundp
+                  ;; Use the previously generated name if one is found in new-constant-names.
                   new-constant
+                   ;; Generate a new name and index it in new-constant-names.
                   (sethash contents new-constant-names (new-constant)))))
            (_
             term)))))))
 
 (defun fetch-psoa-url (url)
+  "Fetch a PSOA KB at the URL and return it as a string."
   ;; The URL must end in .psoa.
   (assert (equal (subseq url (- (length url) (length ".psoa"))) ".psoa"))
   ;; drakma:http-request will return a vector of character codes, so we
@@ -981,14 +989,25 @@ convention _1, _2, ..., _N, if the names aren't already taken."
   (map 'string #'code-char (drakma:http-request url)))
 
 (defun merge-and-rename (master-document imported-documents)
+  "Merge the documents in the list of ruleml-documents
+\"imported-documents\" into the ruleml-document
+\"master-document\". Rename the local constants of the imported
+documents to avoid clashes with those of \"master-document\". Return
+the resulting merged document."
   (let ((excluded-constants (make-hash-table :test #'equal))
-        (master-document-assert (first
-                                 (if-it (ruleml-document-performatives master-document)
-                                        it
-                                        (push (make-ruleml-assert)
-                                              (ruleml-document-performatives master-document))))))
+        ;; master-document may not have an Assert performative; if
+        ;; not, create one for it.
+        (master-document-assert
+          (first
+           (if-it (ruleml-document-performatives master-document)
+                  it
+                  (push (make-ruleml-assert)
+                        (ruleml-document-performatives master-document))))))
 
     (check-type master-document-assert ruleml-assert)
+
+    ;; Index the local constants of \"master-document\" in the
+    ;; \"excluded-constants\" hash table.
     (transform-ast master-document
                    (lambda (term &key &allow-other-keys)
                      (match term
@@ -998,6 +1017,8 @@ convention _1, _2, ..., _N, if the names aren't already taken."
                      term))
 
     (dolist (imported-document imported-documents)
+      ;; Rename the local constants of \"imported-document\", and merge
+      ;; it Assert items and prefixes into \"master-document\".
       (let ((imported-document (rename-local-constants imported-document excluded-constants)))
         (appendf (ruleml-document-prefixes master-document)
                  (ruleml-document-prefixes imported-document))
@@ -1011,8 +1032,14 @@ convention _1, _2, ..., _N, if the names aren't already taken."
   "Load the Imports of the ruleml-document \"document\" and rename all
 local constants before merging them all into a single ruleml-document,
 which is returned."
+  ;; Copy the list of imports from \"document\" so that we can
+  ;; mutate the local copy as a queue. imports is a shallow copy of the
+  ;; imports list.
   (let ((imports (copy-list (ruleml-document-imports document)))
         (documents '()))
+
+    ;; The do macro is documented in the Common Lisp Hyperspec here:
+    ;; http://www.lispworks.com/documentation/HyperSpec/Body/m_do_do.htm
     (do ((import (pop imports) (pop imports)))
         ((null import) (merge-and-rename document (nreverse documents)))
       (let* ((url (ruleml-import-iri-ref import))
