@@ -95,7 +95,8 @@ systems."
       (:xsb (let ((collated-stream (make-string-output-stream))
                   (lines (sort-kb prolog-kb-string predicate-indicators)))
               ;; For XSB, the only advance declaration needed is
-              ;; :- auto_table.
+              ;; :- auto_table and datime for the current date and time.
+              (format collated-stream ":- use_module(standard, [local_datime/1, datime/1]).~%~%")
               (format collated-stream ":- auto_table.~%~%")
               (dolist (line lines)
                 (format collated-stream "~A~%" line))

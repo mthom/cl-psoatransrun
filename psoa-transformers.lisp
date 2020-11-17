@@ -577,6 +577,12 @@ ISO Prolog counterparts. Used for obtaining proper predicate names."
     ("exp" "exp")
     ("log" "log")))
 
+(defun match-builtin-xsb (local)
+  "Names of builtin predicates in the XSB Prolog standard library."
+  (match local
+    ("datime" "datime")
+    ("local_datime" "local_datime")))
+
 (defun make-url-const (ns local prefix-ht &optional stream)
   "Write the properly qualified name of prefixed predicate to the
 output stream \"stream\". Use the \"prefix-ht\" hash table to match
@@ -596,6 +602,10 @@ contain the namespace as a key, substitute the namespace for the URL."
                   (format stream "'<~A~A>'" url local)))
           ("https://www.iso.org/standard/21413.html#"
            (if-it (match-builtin-isopl local)
+                  (format stream "~A" it)
+                  (format stream "'<~A~A>'" url local)))
+          ("http://xsb.sourceforge.net/manual1/manual1.pdf#"
+           (if-it (match-builtin-xsb local)
                   (format stream "~A" it)
                   (format stream "'<~A~A>'" url local)))
           (_ (format stream "'<~A~A>'" url local)))
