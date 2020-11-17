@@ -127,7 +127,7 @@ further tests."
                                   (connect-to-prolog-process engine-client process)
                                   (run-test-case test-kb-filename subdirectory engine-client
                                                  prefix-ht relationships))
-                        (quit-prolog-engine process engine-client)))))
+                        (quit-prolog-engine engine-client process)))))
               (esrap:esrap-parse-error ()
                 (format t "Parse error in KB file ~A~%~%"
                         (file-namestring test-kb-filename)))

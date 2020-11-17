@@ -61,7 +61,7 @@ value of system."
   "Connect a socket to the type, based on the host type. Scryer uses
 bidirectional sockets while XSB needs two unidirectional sockets, of
 which the write socket must connect first."
-  (check-type port (integer 0 65536))
+  (check-type port (integer 0 65353))
   (setf (prolog-engine-client-socket client)
         (ecase (prolog-engine-client-host client)
           (:scryer (socket-connect "127.0.0.1" port))

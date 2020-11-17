@@ -7,6 +7,7 @@
 :- module(xsb_server, []).
 
 :- use_module(file_io, [fd2ioport/2, file_close/1, file_flush/2, fmt_write_string/3]).
+:- use_module(random, [random/3]).
 :- use_module(xsb_writ, [file_write_canonical/2]).
 :- use_module(lists, [member/2]).
 :- use_module(socket, [
@@ -15,17 +16,33 @@
                   socket_bind/3,
                   socket_connect/4,
                   socket_close/2,
-                  socket_listen/3]).
+                  socket_listen/3,
+                  socket_set_option/3]).
 :- use_module(string, [term_to_codes/3]).
 
-xsb_port(6020). % XSB, in its infinite wisdom, requires ports to be instantiated in its socket API.
+
+% Bind to a random socket port to work around OS connection timeouts,
+% using ErrCode to detect when a port isn't available.
+bind_socket_to_random_port(Socket, Port0) :-
+    random(0, 65353, Port),
+    socket_bind(Socket, Port, ErrCode),
+    (  ErrCode == 0 ->
+       Port0 = Port
+    ;
+       ErrCode == 98 -> % The port is bound already, try a different one.
+       bind_socket_to_random_port(Socket, Port0)
+    ;
+       nl, write(-ErrCode), nl, % Signal the error code to cl-psoatransrun.
+       halt
+    ).
 
 start_server :-
     socket(Socket, 0), % socket_server_open('127.0.0.1':Port, ServerSocket),
-    xsb_port(Port),
-    nl, write(Port), nl,
+    socket_set_option(Socket,linger,-1), % SOCK_NOLINGER doesn't appear to work, but its value is -1.
+    bind_socket_to_random_port(Socket, Port),
     socket_bind(Socket, Port, _), % socket_server_accept(ServerSocket, _, Stream, [eof_action(eof_code)]),
-    socket_listen(Socket, 2, _), % listen for two pending connections.
+    socket_listen(Socket, 10, _),
+    nl, write(Port), nl,
     % the read stream.
     socket_accept(Socket, InSocket, _),
     fd2ioport(InSocket, InStream),

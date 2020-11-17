@@ -188,7 +188,7 @@ is begun by an :- initialization(...) directive."
     (finish-output process-input-stream)))
 
 
-(defun quit-prolog-engine (process engine-client)
+(defun quit-prolog-engine (engine-client process)
   "Terminate the Prolog engine, first by halting the server by writing
 \"end_of_file.\" to its output socket, and then by writing \"halt.\"
 to the process input stream. Wait for the process to close after closing
@@ -199,6 +199,10 @@ the process input and output streams."
   (close-socket (prolog-engine-client-socket engine-client))
   (reset-engine-socket engine-client)
 
+  (terminate-prolog-process process))
+
+
+(defun terminate-prolog-process (process)
   (write-line "halt." (sb-ext:process-input process))
   (finish-output (sb-ext:process-input process))
 
@@ -225,8 +229,7 @@ upon success."
   ;; the junk output and try to read the port again.
   (loop (handler-case
             (let* ((port (parse-integer (read-line (sb-ext:process-output process)))))
-              (return-from connect-to-prolog-process
-                (open-socket-to-prolog engine-client :port port)))
+              (return (open-socket-to-prolog engine-client :port port)))
           (parse-error ()))))
 
 (defun start-prolog-process (engine-client)
@@ -283,7 +286,7 @@ to close the process."
                    ;; evaluating the (quit-prolog-engine ...) form before passing
                    ;; control to the restart.
                    (psoa-repl engine-client prefix-ht relationships)
-                (quit-prolog-engine process engine-client)))
+                (quit-prolog-engine engine-client process)))
 
           (recompile-non-relationally (instigating-query-string)
             ;; A non-relational query (here, instigating-query-string) can prompt
