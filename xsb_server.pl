@@ -93,22 +93,31 @@ split_vars([VN | VNs], UVNNames, RVNs) :-
     ).
 
 compile_solution_string(VNs, VarString) :-
-    compile_solution_string_(VNs, "", VarString).
+    compile_solution_string_(VNs, "", VarString, 0).
 
-compile_solution_string_([], VarString, VarString).
-compile_solution_string_([VN=Value|VNs], PrefixString, VarString) :-
+compile_solution_string_([], VarString, VarString, _).
+compile_solution_string_([VN=Value|VNs], PrefixString, VarString, VarCount0) :-
     (  var(Value) ->
-       true
+       fmt_write_string(NamedVarString, "'Var%d'", args(VarCount0)),
+       term_to_codes(VN=NamedVarString, [quoted(false), ignore_ops(true)], Codes),
+       (  PrefixString == "" ->
+          fmt_write_string(VarString0, "%s", args(Codes))
+       ;
+          fmt_write_string(VarString0, "%s, %s", args(PrefixString, Codes))
+       ),
+       Value = NamedVarString,
+       VarCount is VarCount0 + 1
     ;
-       replace_char_lists_with_strings(VN=Value, VN=Y),
+       replace_char_lists_with_strings(Value, Y),
        term_to_codes(VN=Y, [quoted(false), ignore_ops(true)], Codes),
        (  PrefixString == "" ->
           fmt_write_string(VarString0, "%s", args(Codes))
        ;
           fmt_write_string(VarString0, "%s, %s", args(PrefixString, Codes))
-       )
+       ),
+       VarCount = VarCount0
     ),
-    compile_solution_string_(VNs, VarString0, VarString).
+    compile_solution_string_(VNs, VarString0, VarString, VarCount).
 
 
 maplist(_, [], []).
@@ -120,14 +129,7 @@ atom_quoted(Atom, NewAtom) :-
     atom_concat('\'', Atom, NewAtom0),
     atom_concat(NewAtom0, '\'', NewAtom).
 
-replace_char_lists_with_strings(VN=X, VN=Y) :-
-    (  var(X) ->
-       Y = VN
-    ;
-       replace_char_lists_with_strings_(X, Y)
-    ).
-
-replace_char_lists_with_strings_(X, Y) :-
+replace_char_lists_with_strings(X, Y) :-
     (  number(X) ->
        X = Y
     ;  atom(X) ->
@@ -145,7 +147,7 @@ replace_char_lists_with_strings_(X, Y) :-
        ;
           NewF = F
        ),
-       maplist(replace_char_lists_with_strings_, Args, NewArgs),
+       maplist(replace_char_lists_with_strings, Args, NewArgs),
        !,
        Y =.. [NewF | NewArgs]
     ).

@@ -30,7 +30,7 @@ eval_loop(Stream) :-
        read_term(Stream, _, [variable_names(UVNNames)]),
        split_vars(VNNames, UVNNames, RVNNames),
        catch(call(Term), _, false),
-       phrase(compile_solution_string(RVNNames), VarString),
+       phrase(compile_solution_string(RVNNames, 0), VarString),
        (  RVNNames == [] ->
           write_term(Stream, 'Yes', [])
        ;
@@ -56,10 +56,19 @@ split_vars([VN | VNs], UVNNames, RVNs) :-
     ).
 
 
-compile_solution_string([]) --> [].
-compile_solution_string([VN=Term|VNs]) -->
-    {  write_term_to_chars(VN, [], VNChars),
-       write_term_to_chars(Term, [quoted(true)], TermChars) },
+compile_solution_string([], _) --> [].
+compile_solution_string([VN=Term|VNs], VarCount0) -->
+    (  { var(Term) } ->
+       {  write_term_to_chars(VN, [], VNChars),
+          phrase(format_("'Var~d'", [VarCount0]), TermChars),
+          VarCount is VarCount0 + 1
+       }
+    ;
+       {  write_term_to_chars(VN, [], VNChars),
+          write_term_to_chars(Term, [quoted(true)], TermChars),
+          VarCount = VarCount0
+       }
+    ),
     "'='(",
     VNChars,
     ",",
@@ -68,9 +77,9 @@ compile_solution_string([VN=Term|VNs]) -->
     (  { VNs \== [] } ->
        ", "
     ;
-       { true }
+    { true }
     ),
-    compile_solution_string(VNs).
+    compile_solution_string(VNs, VarCount).
 
 
 :- initialization(start_server).
