@@ -39,7 +39,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
                        &bounds start)
       (declare (ignore ruleml ws1 lparen ws2 rparen ws3 ws4))
       (make-ruleml-document :base base
-                            :prefixes (remove nil prefixes)
+                            :prefixes prefixes  ;; NIL's were removed from within prefix-list
+                            :prefix-ht *prefix-ht*
                             :imports (remove nil imports)
                             :performatives (remove nil performatives)
                             :position start))))
