@@ -10,7 +10,11 @@
 
 (defpackage #:psoa-ast
   (:use #:cl #:rutils #:trivia)
-  (:export #:transform-ast
+  (:export #:prefix-list->prefix-ht
+           #:make-url-const
+           #:write-url-const
+           #:prefix-type-cast
+           #:transform-ast
            #:ruleml
            #:ruleml-document
            #:ruleml-document-base
@@ -86,6 +90,8 @@
            #:ruleml-membership
            #:ruleml-membership-oid
            #:ruleml-membership-predicate
+           #:ruleml-iri
+           #:ruleml-iri-contents
            #:ruleml-const-p
            #:ruleml-string-p
            #:ruleml-external-p
@@ -116,6 +122,7 @@
            #:ruleml-exists-p
            #:ruleml-external-p
            #:ruleml-membership-p
+           #:ruleml-iri-ref-p
            #:ruleml-ast-node-position
            #:make-ruleml-document
            #:make-ruleml-const
@@ -144,7 +151,8 @@
            #:make-ruleml-or
            #:make-ruleml-exists
            #:make-ruleml-external
-           #:make-ruleml-membership)
+           #:make-ruleml-membership
+           #:make-ruleml-iri)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-pprint
@@ -160,7 +168,6 @@
   (:export #:*static-objectification-only*
            #:*is-relational-p*
            #:is-relational-query-p
-           #:make-url-const
            #:recompile-document-non-relationally
            #:transform-document
            #:transform-query)

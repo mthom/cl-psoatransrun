@@ -30,7 +30,7 @@ EBNF
 (defstruct (ruleml-prefix (:include ruleml-ast-node))
   "A PSOA RuleML Prefix element."
   (name "" :type (or null string))
-  (iri-ref "" :type string))
+  (iri-ref (make-ruleml-iri) :type ruleml-iri))
 
 (defstruct (ruleml-const (:include ruleml-ast-node))
   "A PSOA RuleML constant."
@@ -43,7 +43,7 @@ standard (written between double quotation marks)."
 
 (defstruct (ruleml-import (:include ruleml-ast-node))
   "The contents of a PSOA RuleML Import(...) directive."
-  (iri-ref "" :type string)
+  (iri-ref (make-ruleml-iri) :type ruleml-iri)
   (profile "" :type (or null string)))
 
 (defstruct (ruleml-assert (:include ruleml-ast-node))
@@ -144,6 +144,129 @@ standard (written between double quotation marks)."
   "A number (float or integer)."
   (value 0 :type number))
 
+(defstruct (ruleml-iri (:include ruleml-ast-node))
+  "A constant representing an IRI."
+  (contents "" :type string))
+
+
+(defun match-builtin-function (local)
+  "Names of builtin functions in PSOA RuleML are matched to their
+ISO Prolog counterparts. Used for obtaining proper predicate names."
+  (match local
+    ("numeric-add" "'+'")
+    ("numeric-subtract" "'-'")
+    ("numeric-multiply" "'*'")
+    ("numeric-divide" "'/'")
+    ("numeric-integer-divide" "'//'")
+    ("numeric-mod" "rem")))
+
+(defun match-builtin-predicate (local)
+    "Names of builtin predicates in PSOA RuleML are matched to their
+ISO Prolog counterparts. Used for obtaining proper predicate names."
+  (match local
+    ("numeric-equal" "'=:='")
+    ("numeric-less-than" "'<'")
+    ("numeric-less-than-or-equal" "'=<'")
+    ("numeric-greater-than" "'>'")
+    ("numeric-greater-than-or-equal" "'>='")
+    ("numeric-not-equal" "=\\=")
+    ("is-literal-integer" "integer")))
+
+(defun match-builtin-isopl (local)
+   "Names of builtin predicates in PSOA RuleML are matched to their
+ISO Prolog counterparts. Used for obtaining proper predicate names."
+  (match local
+    ("integer" "integer")
+    ("float" "float")
+    ("number" "number")
+    ("eq" "'=:='")
+    ("not_eq" "=\\=")
+    ("greater_than" "'>'")
+    ("greater_than_or_eq" "'>='")
+    ("less_than" "'<'")
+    ("less_than_or_eq" "'=<'")
+    ("add" "'+'")
+    ("sub" "'-'")
+    ("mul" "'*'")
+    ("int-div" "'//'")
+    ("div" "'/'")
+    ("abs" "abs")
+    ("rem" "rem")
+    ("mod" "mod")
+    ("sign" "sign")
+    ("float" "float")
+    ("truncate" "truncate")
+    ("round" "round")
+    ("floor" "floor")
+    ("ceiling" "ceiling")
+    ("power" "'**'")
+    ("sin" "sin")
+    ("cos" "cos")
+    ("atan" "atan")
+    ("sqrt" "sqrt")
+    ("exp" "exp")
+    ("log" "log")))
+
+(defun match-builtin-xsb (local)
+  "Names of builtin predicates in the XSB Prolog standard library."
+  (match local
+    ("datime" "datime")
+    ("local_datime" "local_datime")))
+
+(defun write-url-const (ns local prefix-ht &optional stream)
+  "Write the properly qualified name of prefixed predicate to the
+output stream \"stream\" with the help of make-url-const."
+  (let ((result (make-url-const ns local prefix-ht)))
+    (typecase result
+      (ruleml-const (format stream "~A" (ruleml-const-contents result)))
+      (ruleml-iri (format stream "'<~A~A>'" (ruleml-iri-contents result) local))
+      (t (format stream "~A:~A" ns local)))))
+
+(defun make-url-const (ns local prefix-ht &optional (start 0))
+  "Use the \"prefix-ht\" hash table to match the Prefix namespace to
+its URL value. If the hash table doesn't contain the namespace as a
+key, substitute the namespace for the URL."
+  (multiple-value-bind (url foundp)
+      (gethash ns prefix-ht)
+    (when foundp
+      (match (ruleml-iri-contents url)
+        ("http://www.w3.org/2007/rif-builtin-function#"
+         (when-it (match-builtin-function local)
+           (make-ruleml-const :contents it :position start)))
+        ("http://www.w3.org/2007/rif-builtin-predicate#"
+         (when-it (match-builtin-predicate local)
+           (make-ruleml-const :contents it :position start)))
+        ("https://www.iso.org/standard/21413.html#"
+         (when-it (match-builtin-isopl local)
+           (make-ruleml-const :contents it :position start)))
+        ("http://xsb.sourceforge.net/manual1/manual1.pdf#"
+         (when-it (match-builtin-xsb local)
+           (make-ruleml-const :contents it :position start)))
+        (_
+         url)))))
+
+(defun prefix-type-cast (cast operand &optional (start 0))
+  "Perform a compile-time type cast using a prefixed qualifier. Used
+in conjunction with the \"^^\" operator."
+  (cond
+    ((or (string= cast "http://www.w3.org/2001/XMLSchema#integer")
+         (string= cast "http://www.w3.org/2001/XMLSchema#long"))
+     (make-ruleml-number :value (parse-integer operand)
+                         :position start))
+    ((string= cast "http://www.w3.org/2001/XMLSchema#double")
+     (make-ruleml-number :value (read-from-string operand)
+                         :position start))
+    ((string= cast "http://www.w3.org/2001/XMLSchema#string")
+     (make-ruleml-string :contents operand
+                         :position start))))
+
+(defun prefix-list->prefix-ht (prefixes)
+  "Compile a hash table with namespace keys and IRI values."
+  (alist->ht (loop for prefix in prefixes
+                   collect (cons (ruleml-prefix-name prefix)
+                                 (ruleml-prefix-iri-ref prefix)))
+             :test #'equalp))
+
 (defun transform-ast (term key &key positive negative external
                                  (propagator
                                   (lambda (term &key (positive positive) (negative negative)
@@ -228,7 +351,8 @@ traversed is inside an External(...)."
            (ruleml-pname-ln)
            (ruleml-const)
            (ruleml-var)
-           (ruleml-number))
+           (ruleml-number)
+           (ruleml-iri))
        (funcall key term
                 :positive positive
                 :negative negative

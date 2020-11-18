@@ -304,10 +304,10 @@ predicate-indicator cell to be written."
                        ;; using the helper functions defined in
                        ;; psoa-transformers.lisp.
                        (record-predicate-indicator
-                        (make-url-const ns local prefix-ht)
+                        (write-url-const ns local prefix-ht)
                         0
                         recordp)
-                       (make-url-const ns local prefix-ht stream))
+                       (write-url-const ns local prefix-ht stream))
                       ((type string)
                        (record-predicate-indicator const 0 recordp)
                        (if (eql (char const 0) #\_)
@@ -317,6 +317,8 @@ predicate-indicator cell to be written."
                        (format stream "~A" const))))
                    ((ruleml-number :value number)
                     (format stream "~A" number))
+                   ((ruleml-iri :contents iri)
+                    (format stream "'<~A>'" iri))
                    ((ruleml-string :contents const)
                     ;; Enclose strings in double quotes.
                     (format stream "\"~A\"" const)))))

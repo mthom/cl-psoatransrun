@@ -518,99 +518,6 @@ the value of the *is-relational-p* special variable."
       ;; the Assert is completely relational.
       (values relationships (null blacklist)))))
 
-
-(defun match-builtin-function (local)
-  "Names of builtin functions in PSOA RuleML are matched to their
-ISO Prolog counterparts. Used for obtaining proper predicate names."
-  (match local
-    ("numeric-add" "'+'")
-    ("numeric-subtract" "'-'")
-    ("numeric-multiply" "'*'")
-    ("numeric-divide" "'/'")
-    ("numeric-integer-divide" "'//'")
-    ("numeric-mod" "rem")))
-
-(defun match-builtin-predicate (local)
-    "Names of builtin predicates in PSOA RuleML are matched to their
-ISO Prolog counterparts. Used for obtaining proper predicate names."
-  (match local
-    ("numeric-equal" "'=:='")
-    ("numeric-less-than" "'<'")
-    ("numeric-less-than-or-equal" "'=<'")
-    ("numeric-greater-than" "'>'")
-    ("numeric-greater-than-or-equal" "'>='")
-    ("numeric-not-equal" "=\\=")
-    ("is-literal-integer" "integer")))
-
-(defun match-builtin-isopl (local)
-   "Names of builtin predicates in PSOA RuleML are matched to their
-ISO Prolog counterparts. Used for obtaining proper predicate names."
-  (match local
-    ("integer" "integer")
-    ("float" "float")
-    ("number" "number")
-    ("eq" "'=:='")
-    ("not_eq" "=\\=")
-    ("greater_than" "'>'")
-    ("greater_than_or_eq" "'>='")
-    ("less_than" "'<'")
-    ("less_than_or_eq" "'=<'")
-    ("add" "'+'")
-    ("sub" "'-'")
-    ("mul" "'*'")
-    ("int-div" "'//'")
-    ("div" "'/'")
-    ("abs" "abs")
-    ("rem" "rem")
-    ("mod" "mod")
-    ("sign" "sign")
-    ("float" "float")
-    ("truncate" "truncate")
-    ("round" "round")
-    ("floor" "floor")
-    ("ceiling" "ceiling")
-    ("power" "'**'")
-    ("sin" "sin")
-    ("cos" "cos")
-    ("atan" "atan")
-    ("sqrt" "sqrt")
-    ("exp" "exp")
-    ("log" "log")))
-
-(defun match-builtin-xsb (local)
-  "Names of builtin predicates in the XSB Prolog standard library."
-  (match local
-    ("datime" "datime")
-    ("local_datime" "local_datime")))
-
-(defun make-url-const (ns local prefix-ht &optional stream)
-  "Write the properly qualified name of prefixed predicate to the
-output stream \"stream\". Use the \"prefix-ht\" hash table to match
-the Prefix namespace to its URL value. If the hash table doesn't
-contain the namespace as a key, substitute the namespace for the URL."
-  (multiple-value-bind (url foundp)
-      (gethash ns prefix-ht)
-    (if foundp
-        (match url
-          ("http://www.w3.org/2007/rif-builtin-function#"
-           (if-it (match-builtin-function local)
-                  (format stream "~A" it)
-                  (format stream "'<~A~A>'" url local)))
-          ("http://www.w3.org/2007/rif-builtin-predicate#"
-           (if-it (match-builtin-predicate local)
-                  (format stream "~A" it)
-                  (format stream "'<~A~A>'" url local)))
-          ("https://www.iso.org/standard/21413.html#"
-           (if-it (match-builtin-isopl local)
-                  (format stream "~A" it)
-                  (format stream "'<~A~A>'" url local)))
-          ("http://xsb.sourceforge.net/manual1/manual1.pdf#"
-           (if-it (match-builtin-xsb local)
-                  (format stream "~A" it)
-                  (format stream "'<~A~A>'" url local)))
-          (_ (format stream "'<~A~A>'" url local)))
-        (format stream "'<~A~A>'" ns local))))
-
 (defun predicate-name (atom prefix-ht)
   "Compute the proper name of a predicate, the root predicate name of
 a fact or rule conclusion, whether it is an oidless or oidful atom, a
@@ -629,7 +536,7 @@ membership, inside an Exists or Forall clause, etc."
     ((ruleml-exists :formula formula)
      (predicate-name formula prefix-ht))
     ((ruleml-const :contents (ruleml-pname-ln :name ns :url local))
-     (make-url-const ns local prefix-ht))
+     (write-url-const ns local prefix-ht))
     ((ruleml-const :contents const)
      const)))
 
@@ -1061,7 +968,7 @@ which is returned."
     (do ((import (pop imports) (pop imports)))
         ((null import) (merge-and-rename document (nreverse documents)))
       (let* ((url (ruleml-import-iri-ref import))
-             (document (fetch-psoa-url url))
+             (document (fetch-psoa-url (ruleml-iri-contents url)))
              (document (parse 'psoa-grammar::ruleml document)))
         (appendf imports (ruleml-document-imports document))
         (push document documents)))))
@@ -1078,10 +985,7 @@ prefix-ht hash tables."
   (let* ((document (load-imports-and-merge document))
          (local-constants (index-local-constants document))
          (anonymous-constant-renamer (constant-name-generator local-constants))
-         (prefix-ht (alist->ht (loop for prefix in (ruleml-document-prefixes document)
-                                     collect (cons (ruleml-prefix-name prefix)
-                                                   (ruleml-prefix-iri-ref prefix)))
-                               :test #'equalp)))
+         (prefix-ht (prefix-list->prefix-ht (ruleml-document-prefixes document))))
     (make-ruleml-document
      :base (ruleml-document-base document)
      :prefixes (ruleml-document-prefixes document)

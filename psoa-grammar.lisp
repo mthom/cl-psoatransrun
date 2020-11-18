@@ -21,25 +21,37 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 
 ;; The rule language.
 
-(defrule ruleml
-    (and (or "RuleML" "Document")
-         (* (or whitespace comment))
-         #\(
-         (* (or whitespace comment))
-         (? base)
-         (* (or prefix whitespace comment))
-         (* (or import whitespace comment))
-         (* (or assert query whitespace comment))
-         #\)
-         (* (or whitespace comment)))
-  (:destructure (ruleml ws1 lparen ws2 base prefixes imports performatives rparen ws3
-                        &bounds start)
-                (declare (ignore ruleml ws1 lparen ws2 rparen ws3))
-                (make-ruleml-document :base base
-                                      :prefixes (remove nil prefixes)
-                                      :imports (remove nil imports)
-                                      :performatives (remove nil performatives)
-                                      :position start)))
+(let (*prefix-ht*)
+  (declare (special *prefix-ht*))
+  (defrule ruleml
+      (and (or "RuleML" "Document")
+           (* (or whitespace comment))
+           #\(
+           (* (or whitespace comment))
+           (? base)
+           prefix-list
+           (* (or import whitespace comment))
+           (* (or assert query whitespace comment))
+           #\)
+           (* (or whitespace comment)))
+    (:destructure (ruleml ws1 lparen ws2 base prefixes imports performatives rparen ws3
+                          &bounds start)
+      (declare (ignore ruleml ws1 lparen ws2 rparen ws3))
+      (make-ruleml-document :base base
+                            :prefixes (remove nil prefixes)
+                            :imports (remove nil imports)
+                            :performatives (remove nil performatives)
+                            :position start))))
+
+(defrule prefix-list
+    (* (or prefix whitespace comment))
+  (:around ()
+    (declare (special *prefix-ht*))
+    (let ((prefix-list (esrap:call-transform)))
+      (setf *prefix-ht* (prefix-list->prefix-ht prefix-list))
+      prefix-list))
+  (:lambda (prefixes)
+    (remove nil prefixes)))
 
 (defrule multi-line-comment
     (or (and "<!--" (* (and (! "-->") character)) "-->")
@@ -81,8 +93,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\))
   (:destructure (prefix ws1 lparen ws2 name ws3 colon ws4 iri-ref ws5 rparen
                         &bounds start)
-                (declare (ignore prefix ws1 lparen ws2 ws3 colon ws4 rparen ws5))
-                (make-ruleml-prefix :name name :iri-ref iri-ref :position start)))
+    (declare (ignore prefix ws1 lparen ws2 ws3 colon ws4 rparen ws5))
+    (make-ruleml-prefix :name name :iri-ref iri-ref :position start)))
 
 (defrule import
     (and "Import"
@@ -487,8 +499,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 	     #\)
 	     (* (or whitespace comment)))
   (:destructure (external ws1 lparen ws2 expr ws3 rparen ws4 &bounds start)
-                (declare (ignore external ws1 lparen rparen ws2 ws3 ws4))
-                (make-ruleml-external :atom expr :position start)))
+    (declare (ignore external ws1 lparen rparen ws2 ws3 ws4))
+    (make-ruleml-external :atom expr :position start)))
 
 (defrule const
     (or const-short const-string))
@@ -498,22 +510,47 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
         curie
         numeric-literal
         pn-local ;; (and #\_ (? pn-local))
-        unicode-string)
+        (and unicode-string (! "^^")))
   (:lambda (const &bounds start)
     (typecase const
       (ruleml-string const)
       (ruleml-const const)
+      (ruleml-iri const)
+      (list (car (remove nil const)))
       (number (make-ruleml-number :value const :position start))
       (t (make-ruleml-const :contents const :position start)))))
 
 (defrule const-string
     (and unicode-string "^^" sym-space)
   (:destructure (unicode-string carets sym-space &bounds start)
-                (make-ruleml-string :contents (concatenate 'string
-                                                           (ruleml-string-contents unicode-string)
-                                                           carets
-                                                           sym-space)
-                                    :position start)))
+    (declare (ignore carets))
+    (let ((operand (ruleml-string-contents unicode-string)))
+      (typecase sym-space
+        (ruleml-iri
+         (let ((value (prefix-type-cast (ruleml-iri-contents sym-space) operand)))
+           (if value
+               value
+               (make-rule-expr
+                :root sym-space
+                :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string)))))))
+        (ruleml-pname-ln
+         (let ((ns (ruleml-pname-ln-name sym-space))
+               (local (ruleml-pname-ln-url sym-space)))
+           (declare (special *prefix-ht*))
+           (multiple-value-bind (url foundp)
+               (gethash ns *prefix-ht*)
+             (if foundp
+                 (let* ((cast (format nil "~A~A" (ruleml-iri-contents url) local))
+                        (value (prefix-type-cast cast operand)))
+                   (if value
+                       value
+                       #1=(make-ruleml-expr
+                           :root sym-space
+                           :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string))))))
+                 #1#))))))))
+
+(defrule sym-space
+    (or angle-bracket-iri curie))
 
 (defrule var
     (and #\? (? pn-local))
@@ -523,23 +560,22 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
                     (make-ruleml-var :name pn-local :position start)
                     (psoa-transformers::fresh-variable))))
 
-(defrule sym-space
-    (or angle-bracket-iri curie))
 
 ;; Lexical analysis.
 
 (defrule unicode-string
     (and #\" (* (or echar (not (or #\" #\\ eol)))) #\")
   (:destructure (dbl-quote0 chars dbl-quote1 &bounds start)
-                (declare (ignore dbl-quote0 dbl-quote1))
-                (make-ruleml-string :contents (concatenate 'string chars)
-                                    :position start)))
+    (declare (ignore dbl-quote0 dbl-quote1))
+    (make-ruleml-string :contents (concatenate 'string chars)
+                        :position start)))
 
 (defrule iri-ref
     (and #\< (* iri-ref-char) #\>)
-  (:destructure (lbrack iri-ref-chars rbrack)
-                (declare (ignore lbrack rbrack))
-                (concatenate 'string iri-ref-chars)))
+  (:destructure (lbrack iri-ref-chars rbrack &bounds start)
+    (declare (ignore lbrack rbrack))
+    (make-ruleml-iri :contents (concatenate 'string iri-ref-chars)
+                     :position start)))
 
 (defrule iri-ref-char
     (not (or #\< #\> #\" #\{ #\} #\| #\^ #\` #\\

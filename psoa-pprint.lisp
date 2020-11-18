@@ -64,9 +64,7 @@ preceded by caret (^).")
     (when (ruleml-prefix-name prefix)
       (write (ruleml-prefix-name prefix) :stream stream :escape nil))
     (write-char #\: stream)
-    (write-char #\< stream)
-    (write (ruleml-prefix-iri-ref prefix) :stream stream :escape nil)
-    (write-char #\> stream)))
+    (write (ruleml-prefix-iri-ref prefix) :stream stream :escape nil)))
 
 (set-pprint-dispatch 'ruleml-prefix 'pprint-ruleml-prefix)
 
@@ -145,9 +143,9 @@ preceded by caret (^).")
 
 (defun pprint-ruleml-pname-ln (stream pname-ln)
   (when-it (ruleml-pname-ln-name pname-ln)
-    (write it :stream stream))
+    (write it :stream stream :escape nil))
   (write-char #\: stream)
-  (write (ruleml-pname-ln-url pname-ln) :stream stream))
+  (write (ruleml-pname-ln-url pname-ln) :stream stream :escape nil))
 
 (set-pprint-dispatch 'ruleml-pname-ln 'pprint-ruleml-pname-ln)
 
@@ -271,3 +269,10 @@ preceded by caret (^).")
   (write (ruleml-number-value number) :stream stream))
 
 (set-pprint-dispatch 'ruleml-number 'pprint-ruleml-number)
+
+(defun pprint-ruleml-iri (stream iri)
+  (write-string "<" stream)
+  (write-string (ruleml-iri-contents iri) stream)
+  (write-string ">" stream))
+
+(set-pprint-dispatch 'ruleml-iri 'pprint-ruleml-iri)
