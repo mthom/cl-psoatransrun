@@ -24,7 +24,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (let (*prefix-ht*)
   (declare (special *prefix-ht*))
   (defrule ruleml
-      (and (or "RuleML" "Document")
+      (and (* (or whitespace comment))
+           (or "RuleML" "Document")
            (* (or whitespace comment))
            #\(
            (* (or whitespace comment))
@@ -34,9 +35,9 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
            (* (or assert query whitespace comment))
            #\)
            (* (or whitespace comment)))
-    (:destructure (ruleml ws1 lparen ws2 base prefixes imports performatives rparen ws3
-                          &bounds start)
-      (declare (ignore ruleml ws1 lparen ws2 rparen ws3))
+    (:destructure (ws1 ruleml ws2 lparen ws3 base prefixes imports performatives rparen ws4
+                       &bounds start)
+      (declare (ignore ruleml ws1 lparen ws2 rparen ws3 ws4))
       (make-ruleml-document :base base
                             :prefixes (remove nil prefixes)
                             :imports (remove nil imports)
