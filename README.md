@@ -27,34 +27,31 @@ libraries on which cl-psoatransrun depends:
 * (ql:quickload "usocket")
 ```
 
-Next, the ASDF build file "psoatransrun.asd" must be loaded into SBCL
-as in:
-
-cl-psoatransrun is nearly ready to be used. In the two final steps, the
-global variables at the top of the file
+Based on these libraries, cl-psoatransrun can be compiled into the
+Lisp image. The global variables at the top of the file
 [prolog-engine-client.lisp](http://github.com/mthom/cl-psoatransrun/tree/master/prolog-engine-client.lisp),
-`*default-scryer-prolog-path*` and `*default-xsb-prolog-path*`
-must be changed to reflect the local paths of the corresponding
-executables on your machine. Similarly, a local copy of the
-[PSOATransRun test
+`*default-scryer-prolog-path*` and `*default-xsb-prolog-path*` must be
+changed to reflect the local paths of the corresponding executables on
+your machine. Similarly, a local copy of the [PSOATransRun test
 suite](https://github.com/RuleML/PSOATransRunComponents/tree/master/PSOATransRun/test)
-should be downloaded, and the global variable
-`*test-suite-directory*` of
+should be downloaded, and the global variable `*test-suite-directory*`
+of
 [psoatransrun-tests.lisp](http://github.com/mthom/cl-psoatransrun/tree/master/psoatransrun-tests.lisp)
 must be changed to its path.
 
-With the changes in place, enter into SBCL:
+Next, the ASDF build file "psoatransrun.asd" must be loaded into SBCL
+as in:
 
 ```
 * (load "psoatransrun.asd")
 * (asdf:load-system "psoatransrun")
 ```
 
-(Quicklisp will download and install the ASDF build system during its
-own install, so there's no need to load ASDF explicitly via
-Quickload.)
+(Quicklisp will have downloaded and installed the ASDF build system
+during its own above install, so there's no need to load ASDF
+explicitly via Quickload.)
 
-The cl-psoatransrun REPL is loaded with a target KB passed as a string
+The cl-psoatransrun REPL is entered with a target KB passed as a string
 by entering:
 
 ```
@@ -111,7 +108,7 @@ Support for Scryer Prolog is currently in its infancy, as Scryer is
 less mature than XSB and its support for tabling is less robust. For
 these reasons, XSB Prolog is the current default backend.
 
-To run the test suite, the form
+To run the above-referenced test suite, the form
 ```
 * (psoatransrun-tests:run-test-suite)
 ``` 
@@ -122,5 +119,5 @@ keyword argument `:system` with default `:xsb`.
 cl-psoatransrun has been tested on Linux with both Scryer and XSB as
 backends. It's expected to work on Linux, macOS, and other UNIX-like
 systems. Scryer does not yet run on Windows, and cl-psoatransrun's use
-of XSB sockets API may likewise prevent the use of cl-psoatransrun +
+of XSB's socket API may likewise prevent the use of cl-psoatransrun +
 XSB on Windows.
