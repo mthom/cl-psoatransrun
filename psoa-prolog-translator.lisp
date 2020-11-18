@@ -291,11 +291,11 @@ predicate-indicator cell to be written."
                    ((ruleml-implies :conclusion conclusion :condition condition)
                     (format stream "~A :- ~A"
                             (translate conclusion nil t) ;; Conclusions formulas are at top-level..
-                            (translate condition))) ;; .. and condition formuls are not.
+                            (translate condition))) ;; .. and condition formulas are not.
                    ((ruleml-var :name name)
                     (format stream "Q~A" name))
                    ((ruleml-naf :formula formula)
-                    (format stream "\+ (~A)"
+                    (format stream "\\+ (~A)"
                             (translate formula)))
                    ((ruleml-const :contents const)
                     (match const
