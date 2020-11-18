@@ -790,7 +790,16 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
         (character-ranges (#\u30FC #\u30FE))))
 
 (defrule numeric-literal
-    (or numeric-literal-positive numeric-literal-negative numeric-literal-unsigned))
+    (and (or numeric-literal-positive
+             numeric-literal-negative
+             numeric-literal-unsigned)
+         (! (or pn-chars plx)) ;; don't mistake the prefix of a
+                               ;; pn-local for a standalone
+                               ;; numeric-literal
+         )
+  (:destructure (numeric-literal trailing-nil)
+    (declare (ignore trailing-nil))
+    numeric-literal))
 
 (defrule numeric-literal-unsigned
     (or double decimal integer))
