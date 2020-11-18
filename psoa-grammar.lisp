@@ -306,7 +306,7 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
     (or atom expr))
 
 (defrule atom-oidful
-    (and (or expr subterm)
+    (and (or atom-oidful expr subterm)
          #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
@@ -320,8 +320,9 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
     (or atom-oidless-short atom-oidless-long))
 
 (defrule atom-oidless-short
-    (and term (? psoa-rest))
-  (:destructure (root descriptors &bounds start)
+    (and term (! #\#) (? psoa-rest))
+  (:destructure (root not-hash descriptors &bounds start)
+    (declare (ignore not-hash))
     (let ((descriptors (remove nil descriptors)))
       (make-ruleml-atom :root root
                         :descriptors descriptors

@@ -421,14 +421,19 @@ predicates."
                 (make-ruleml-or)) ;; Replace it with Or().
                (t ;; Unify the variable OID of term to a function term
                 ;; OID Skolem-created by make-oid-cons.
-                (make-ruleml-and :terms
-                                 (loop for tuple in descriptors
-                                       for terms = (ruleml-tuple-terms tuple)
-                                       for atom  = (make-ruleml-atom :root root :descriptors (list tuple))
-                                       for oid-cons-equal = (make-ruleml-equal
-                                                             :left  oid
-                                                             :right (make-oid-cons root terms))
-                                       nconc (list atom oid-cons-equal))))))
+                (if descriptors
+                    (make-ruleml-and
+                     :terms
+                     (loop for tuple in descriptors
+                           for terms = (ruleml-tuple-terms tuple)
+                           for atom  = (make-ruleml-atom :root root :descriptors (list tuple))
+                           for oid-cons-equal = (make-ruleml-equal
+                                                 :left  oid
+                                                 :right (make-oid-cons root terms))
+                           nconc (list atom oid-cons-equal)))
+                    (make-ruleml-equal
+                     :left oid
+                     :right (make-oid-cons root '()))))))
         ((ruleml-membership :oid oid :predicate predicate) ;; term is a membership.
          (if (ruleml-var-p oid)
              (multiple-value-bind (tuple-arities foundp) ;; 2.4
