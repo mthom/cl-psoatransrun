@@ -2,7 +2,7 @@
   :description "A CL implementation of PSOATransRun, realizing the PSOA RuleML data and rule language."
   :author "Mark Thom"
   :license "BSD-3"
-  :version "0.9"
+  :version "1.0"
   :serial t
   :depends-on (#:drakma #:esrap #:pathname-utils #:rutils #:trivia #:usocket)
   :components ((:file "package")
