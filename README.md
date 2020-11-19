@@ -118,6 +118,6 @@ keyword argument `:system` with default `:xsb`.
 
 cl-psoatransrun has been tested on Linux with both Scryer and XSB as
 backends. It's expected to work on Linux, macOS, and other UNIX-like
-systems. Scryer does not yet run on Windows, and cl-psoatransrun's use
-of XSB's socket API may likewise prevent the use of cl-psoatransrun +
-XSB on Windows.
+systems. Scryer does not yet run on Windows, although cl-psoatransrun
+has been tested and confirmed to work with XSB versions 3.6 and 3.8 on
+Windows.
