@@ -180,17 +180,15 @@
 
 (defpackage #:prolog-engine-client
   (:use #:cl #:usocket)
-  (:export #:close-socket
-           #:dequeue-query
+  (:export #:dequeue-query
            #:enqueue-query
            #:make-engine-client
-           #:open-socket-to-prolog
            #:prolog-engine-client-path
            #:prolog-engine-client-host
-           #:prolog-engine-client-socket
-           #:in-socket-stream
-           #:out-socket-stream
-           #:reset-engine-socket))
+           #:prolog-engine-client-process
+           #:process-input-stream
+           #:process-output-stream
+           #:terminate-engine-client))
 
 (defpackage #:psoatransrun
   (:use #:cl #:drakma #:prolog-engine-client #:psoa-ast

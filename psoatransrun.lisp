@@ -79,6 +79,14 @@ quotes. This function removes the quotes if found."
       (subseq solution-string 1 (1- (length solution-string)))
       solution-string))
 
+(defun xsb-message-p (string)
+  "A predicate function used to detect XSB warning messages read from
+streams."
+  (let ((warning-location (search "++Warning" string))
+        (comment-location (search "% " string)))
+    (or (and (numberp warning-location) (zerop warning-location))
+        (and (numberp comment-location) (zerop comment-location)))))
+
 (defun read-and-collect-solutions (stream &optional (grammar 'prolog-grammar::goal-sequence))
   "Read lines of text representing solution sets from \"stream\" and
 collect them into the list \"solutions\" until the end of \"stream\"
@@ -103,8 +111,8 @@ which demands a different grammar to be parsed."
                and do (return solutions)
         else if (equalp solution "Yes")
                collect "yes" into solutions
-        else collect
-             (parse grammar (trim-solution-string solution))
+        else if (not (xsb-message-p solution))
+               collect (parse grammar (trim-solution-string solution))
           into solutions))
 
 (defun print-solutions (solutions)
@@ -151,18 +159,18 @@ send it along to the engine, gather and print the solutions."
 
 (defun send-query-to-prolog-engine (engine-client query-string prefix-ht relationships)
   "Translate the PSOA RuleML query string \"query-string\" to its
-Prolog equivalent, and send it out to the engine using its output
-socket. Read and collect the solution sets from the engine's output
-socket."
-  (let ((engine-socket (prolog-engine-client-socket engine-client)))
-    (multiple-value-bind (query-string toplevel-var-string)
-        (psoa-query->prolog query-string prefix-ht relationships)
-      (write-line query-string (out-socket-stream engine-socket))
-      (write-line toplevel-var-string (out-socket-stream engine-socket))
-      (force-output (out-socket-stream engine-socket))
-      (read-and-collect-solutions (in-socket-stream engine-socket)))))
+Prolog equivalent, and send it out to the engine using its input
+stream. Read and collect the solution sets from the engine's output
+stream."
+  (multiple-value-bind (query-string toplevel-var-string)
+      (psoa-query->prolog query-string prefix-ht relationships)
+    (write-line query-string (process-input-stream engine-client))
+    (write-line toplevel-var-string (process-input-stream engine-client))
+    (force-output (process-input-stream engine-client))
+    (read-and-collect-solutions (process-output-stream engine-client))))
 
-(defun init-prolog-process (prolog-kb-string process &key system)
+(defun init-prolog-process (engine-client prolog-kb-string process
+                            &aux (system (prolog-engine-client-host engine-client)))
   "Load the translated Prolog KB into the Prolog engine backend by
 writing \"prolog-kb-string\" to the process input stream. Next, load
 the Prolog server corresponding to the Prolog system, whose execution
@@ -185,59 +193,29 @@ is begun by an :- initialization(...) directive."
                   process-input-stream)
     (write-string (cdr (assoc system system-servers)) process-input-stream)
     (write-line   "')." process-input-stream)
-    (finish-output process-input-stream)))
+    (finish-output process-input-stream)
+
+    ;; Set the process slot of the engine client.
+    (setf (prolog-engine-client-process engine-client) process)))
 
 
-(defun quit-prolog-engine (engine-client process)
+(defun quit-prolog-engine (engine-client)
   "Terminate the Prolog engine, first by halting the server by writing
-\"end_of_file.\" to its output socket, and then by writing \"halt.\"
-to the process input stream. Wait for the process to close after closing
-the process input and output streams."
-  (write-line "end_of_file." (out-socket-stream (prolog-engine-client-socket engine-client)))
-  (finish-output (out-socket-stream (prolog-engine-client-socket engine-client)))
-
-  (close-socket (prolog-engine-client-socket engine-client))
-  (reset-engine-socket engine-client)
-
-  (terminate-prolog-process process))
-
-
-(defun terminate-prolog-process (process)
-  (write-line "halt." (sb-ext:process-input process))
-  (finish-output (sb-ext:process-input process))
-
-  (sb-ext:process-wait process)
-  (sb-ext:process-close process)
-
-  (close (sb-ext:process-input process) :abort t)
-  (close (sb-ext:process-output process) :abort t))
-
-
-(defun connect-to-prolog-process (engine-client process)
-  "This function assumes that the Prolog engine has been initiated as
-a subprocess by an invocation of init-prolog-process, and that the
-server program is now running. This means it has printed the port number
-the server is listening to, and is awaiting socket connections.
-
-Therefore, connect-to-prolog-process tries to read and parse the port
-integer from the subprocess' output stream, passing it along to
-connect-to-prolog-process upon success. The error handling loop
-surrounding the reading and parsing of the port number is escaped from
-upon success."
-  ;; It's possible for the runtime to print warning messages (ie.,
-  ;; for singleton variables) in some cases. In those cases, ignore
-  ;; the junk output and try to read the port again.
-  (loop (handler-case
-            (let* ((port (parse-integer (read-line (sb-ext:process-output process)))))
-              (return (open-socket-to-prolog engine-client :port port)))
-          (parse-error ()))))
+\"end_of_file.\", and then by writing \"halt.\", to the process input
+stream. Wait for the process to close after closing the process input
+and output streams."
+  (write-line "end_of_file." (process-input-stream engine-client))
+  (finish-output (process-input-stream engine-client))
+  (terminate-engine-client engine-client))
 
 (defun start-prolog-process (engine-client)
   "Launch the Prolog engine backend as a subprocess using the SBCL
 run-program extension. Obviously this isn't portable to other Common
 Lisp implementations."
   (sb-ext:run-program (prolog-engine-client-path engine-client)
-                      '()
+                      (ecase (prolog-engine-client-host engine-client)
+                        (:xsb '("--nobanner" "--quietload" "--noprompt" "--nofeedback"))
+                        (:scryer '()))
                       :input :stream
                       :output :stream
                       :wait nil))
@@ -259,7 +237,6 @@ with user assistance if necessary. Once done, enter -psoa-load-and-repl."
 which is transformed and translated as described in the documentation
 of psoa-document->prolog. Then launch the Prolog backend using
 start-prolog-process, initialize the KB using init-prolog-process,
-connect to the launched Prolog server using connect-to-prolog-process,
 and launch the REPL.
 
 Upon abort or any other unresolvable error, execute quit-prolog-engine
@@ -274,11 +251,7 @@ to close the process."
             (let* ((process (start-prolog-process engine-client)))
 
               (format t "The translated KB:~%~%~A" prolog-kb-string)
-
-              (init-prolog-process prolog-kb-string process
-                                   :system (prolog-engine-client-host engine-client))
-
-              (connect-to-prolog-process engine-client process)
+              (init-prolog-process engine-client prolog-kb-string process)
 
               (unwind-protect
                    ;; If a call beneath psoa-repl invokes the recompile-non-relationally
@@ -286,7 +259,7 @@ to close the process."
                    ;; evaluating the (quit-prolog-engine ...) form before passing
                    ;; control to the restart.
                    (psoa-repl engine-client prefix-ht relationships)
-                (quit-prolog-engine engine-client process)))
+                (quit-prolog-engine engine-client)))
 
           (recompile-non-relationally (instigating-query-string)
             ;; A non-relational query (here, instigating-query-string) can prompt

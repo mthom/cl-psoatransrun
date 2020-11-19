@@ -7,80 +7,36 @@
 :- module(xsb_server, []).
 
 :- use_module(file_io, [fd2ioport/2, file_close/1, file_flush/2, fmt_write_string/3]).
-:- use_module(random, [random/3]).
 :- use_module(xsb_writ, [file_write_canonical/2]).
 :- use_module(lists, [member/2]).
-:- use_module(socket, [
-                  socket/2,
-                  socket_accept/3,
-                  socket_bind/3,
-                  socket_connect/4,
-                  socket_close/2,
-                  socket_listen/3,
-                  socket_set_option/3]).
 :- use_module(string, [term_to_codes/3]).
 
-
-% Bind to a random socket port to work around OS connection timeouts,
-% using ErrCode to detect when a port isn't available.
-bind_socket_to_random_port(Socket, Port0) :-
-    random(0, 65353, Port),
-    socket_bind(Socket, Port, ErrCode),
-    (  ErrCode == 0 ->
-       Port0 = Port
-    ;
-       ErrCode == 98 -> % The port is bound already, try a different one.
-       bind_socket_to_random_port(Socket, Port0)
-    ;
-       nl, write(-ErrCode), nl, % Signal the error code to cl-psoatransrun.
-       halt
-    ).
-
 start_server :-
-    socket(Socket, 0), % socket_server_open('127.0.0.1':Port, ServerSocket),
-    socket_set_option(Socket,linger,-1), % SOCK_NOLINGER doesn't appear to work, but its value is -1.
-    bind_socket_to_random_port(Socket, Port),
-    socket_bind(Socket, Port, _), % socket_server_accept(ServerSocket, _, Stream, [eof_action(eof_code)]),
-    socket_listen(Socket, 10, _),
-    nl, write(Port), nl,
-    % the read stream.
-    socket_accept(Socket, InSocket, _),
-    fd2ioport(InSocket, InStream),
-    % the write stream.
-    socket_accept(Socket, OutSocket, _),
-    fd2ioport(OutSocket, OutStream),
-    eval_loop(InStream, OutStream),
-    file_close(InStream),
-    file_close(OutStream),
-    socket_close(InSocket, _),
-    socket_close(OutSocket, _),
-    socket_close(Socket, _). % socket_server_close(ServerSocket)..
+    eval_loop.
 
-eval_loop(InStream, OutStream) :-
-    read_term(InStream, Term, [variable_names(VNNames)]),
+eval_loop :-
+    read_term(user_input, Term, [variable_names(VNNames)]),
     (  Term == end_of_file ->
        true
     ;
-       read_term(InStream, _, [variable_names(UVNNames)]),
+       read_term(user_input, _, [variable_names(UVNNames)]),
        split_vars(VNNames, UVNNames, RVNNames),
        catch(call(Term), _, false),
        compile_solution_string(RVNNames, VarString),
        (  ( var(VarString) ; VarString == "" ) ->
-          file_write_string(OutStream, "Yes")
+          write_string("Yes")
        ;
-          file_write_string(OutStream, VarString)
+          write_string(VarString)
        ),
-       file_flush(OutStream, _),
        false
     ;
-       file_write_string(OutStream, "No"),
-       file_flush(OutStream, _),
-       eval_loop(InStream, OutStream)
+       write_string("No"),
+       eval_loop
     ).
 
-file_write_string(OutStream, Codes) :-
+write_string(Codes) :-
     fmt_write_string(OutString, "%s\n", args(Codes)),
-    file_write(OutStream, OutString).
+    write(OutString).
 
 
 split_vars([], _, []).

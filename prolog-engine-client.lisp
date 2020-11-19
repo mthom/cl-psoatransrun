@@ -18,16 +18,10 @@ server. The server compiles and loads the translated Prolog KB sent to
 it by cl-psoatransrun. It receives query strings it evaluates against
 the translated KB, and sends back answer strings."
   (host :scryer :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
-  (path *default-scryer-prolog-path* :type pathname)
+  (path #p"" :type pathname)
   (pending-query nil :type (or null string)) ;; A pending query, i.e., one that prompted a KB recompilation.
-  socket ;; Either a single bidirectional socket (Scryer) or two unidirectional sockets (XSB).
+  process ;; An object representing the Prolog subprocess.
   )
-
-(defstruct xsb-engine-socket
-  "Defines a \"socket\" for use with XSB sockets API, which supports only uni-directional
-sockets."
-  read-socket
-  write-socket)
 
 (defun make-engine-client (system)
   "Configure a prolog-engine-client according to the path and socket
@@ -38,16 +32,7 @@ value and type defaults. Sockets are initialized separately."
               :path *default-scryer-prolog-path*))
     (:xsb (make-prolog-engine-client
            :host :xsb
-           :path *default-xsb-prolog-path*
-           :socket (make-xsb-engine-socket)))))
-
-(defun reset-engine-socket (engine-client)
-  "Reset the Prolog engine socket slot, whose type is dictated by the
-value of system."
-  (setf (prolog-engine-client-socket engine-client)
-        (ecase (prolog-engine-client-host engine-client)
-          (:scryer nil)
-          (:xsb (make-xsb-engine-socket)))))
+           :path *default-xsb-prolog-path*))))
 
 (defun enqueue-query (engine-client query-string)
   (setf (prolog-engine-client-pending-query engine-client)
@@ -57,51 +42,18 @@ value of system."
   (prog1 (prolog-engine-client-pending-query engine-client)
     (enqueue-query engine-client nil)))
 
-(defun open-socket-to-prolog (client &key port)
-  "Connect a socket to the type, based on the host type. Scryer uses
-bidirectional sockets while XSB needs two unidirectional sockets, of
-which the write socket must connect first."
-  (check-type port (integer 0 65353))
-  (setf (prolog-engine-client-socket client)
-        (ecase (prolog-engine-client-host client)
-          (:scryer (socket-connect "127.0.0.1" port))
-          (:xsb (make-xsb-engine-socket
-                 :write-socket (socket-connect "127.0.0.1" port)
-                 :read-socket (socket-connect "127.0.0.1" port)))))
-  (prolog-engine-client-socket client))
+(defun process-input-stream (engine-client)
+  (sb-ext:process-input (prolog-engine-client-process engine-client)))
 
-#|
+(defun process-output-stream (engine-client)
+  (sb-ext:process-output (prolog-engine-client-process engine-client)))
 
-The generic functions out-socket-stream, in-socket-stream and
-close-socket are used in the #:psoatransrun and #:psoatransrun-tests
-packages to access and close socket streams. Their arguments are
-specialized to the socket types used by the two variants of
-prolog-engine-client, allowing functions in those packages to ignore
-client implementation details.
+(defun terminate-engine-client (engine-client)
+  (write-line "halt." (process-input-stream engine-client))
+  (finish-output (process-input-stream engine-client))
 
-|#
+  (sb-ext:process-wait (prolog-engine-client-process engine-client))
+  (sb-ext:process-close (prolog-engine-client-process engine-client))
 
-(defgeneric out-socket-stream (socket))
-
-(defgeneric in-socket-stream (socket))
-
-(defmethod out-socket-stream ((socket usocket))
-  (socket-stream socket))
-
-(defmethod in-socket-stream ((socket usocket))
-  (socket-stream socket))
-
-(defmethod out-socket-stream ((socket xsb-engine-socket))
-  (socket-stream (xsb-engine-socket-write-socket socket)))
-
-(defmethod in-socket-stream ((socket xsb-engine-socket))
-  (socket-stream (xsb-engine-socket-read-socket socket)))
-
-(defgeneric close-socket (socket))
-
-(defmethod close-socket ((socket usocket))
-  (socket-close socket))
-
-(defmethod close-socket ((socket xsb-engine-socket))
-  (socket-close (xsb-engine-socket-write-socket socket))
-  (socket-close (xsb-engine-socket-read-socket socket)))
+  (close (process-input-stream engine-client) :abort t)
+  (close (process-output-stream engine-client) :abort t))

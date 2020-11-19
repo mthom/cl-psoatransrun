@@ -123,11 +123,10 @@ further tests."
                     (declare (ignore is-relational-p))
                     (let ((process (start-prolog-process engine-client)))
                       (unwind-protect
-                           (progn (init-prolog-process prolog-kb-string process :system system)
-                                  (connect-to-prolog-process engine-client process)
+                           (progn (init-prolog-process engine-client prolog-kb-string process)
                                   (run-test-case test-kb-filename subdirectory engine-client
                                                  prefix-ht relationships))
-                        (quit-prolog-engine engine-client process)))))
+                        (quit-prolog-engine engine-client)))))
               (esrap:esrap-parse-error ()
                 (format t "Parse error in KB file ~A~%~%"
                         (file-namestring test-kb-filename)))
