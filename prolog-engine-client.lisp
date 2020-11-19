@@ -9,7 +9,9 @@ Default engine paths as global variables. Change these to your local paths!
   #p"/home/mark/Projects/Rust/scryer-prolog/target/release/scryer-prolog")
 
 (defparameter *default-xsb-prolog-path*
-  #p"/home/mark/XSB/bin/xsb")
+  #p"/home/mark/XSB/bin/xsb"
+ ;;#p"c:/program files (x86)/xsb/config/x64-pc-windows/bin/xsb.exe"
+  )
 
 (defstruct prolog-engine-client
   "A structure containing the name, path and socket of a Prolog
@@ -24,8 +26,8 @@ the translated KB, and sends back answer strings."
   )
 
 (defun make-engine-client (system)
-  "Configure a prolog-engine-client according to the path and socket
-value and type defaults. Sockets are initialized separately."
+  "Configure a prolog-engine-client according to the path
+default. Processes are initialized separately."
   (ecase system
     (:scryer (make-prolog-engine-client
               :host :scryer

@@ -170,6 +170,17 @@ stream."
     (force-output (process-input-stream engine-client))
     (read-and-collect-solutions (process-output-stream engine-client))))
 
+(defun consult-local-file (filename stream)
+  "Preface filename with the source directory (which means it is a 'local' file)
+and tell the Prolog engine to consult it."
+  (write-string "consult('" stream)
+  (write-string (namestring
+                 (merge-pathnames (asdf:system-source-directory "psoatransrun")
+                                  (pathname filename)))
+                stream)
+  (write-line   "')." stream)
+  (finish-output stream))
+
 (defun init-prolog-process (engine-client prolog-kb-string process
                             &aux (system (prolog-engine-client-host engine-client)))
   "Load the translated Prolog KB into the Prolog engine backend by
@@ -178,23 +189,21 @@ the Prolog server corresponding to the Prolog system, whose execution
 is begun by an :- initialization(...) directive."
   (let ((process-input-stream (sb-ext:process-input process))
         (system-servers '((:scryer . "scryer_server.pl")
-                          (:xsb . "xsb_server.pl"))))
-    ;; Compile the PSOA document in the engine.
-    (write-line "[user]." process-input-stream)
-    (finish-output process-input-stream)
+                          (:xsb . "xsb_server.pl")))
+        (local-kb-pathname (merge-pathnames (asdf:system-source-directory "psoatransrun")
+                                            #p"local-KB.pl")))
 
-    (write-line prolog-kb-string process-input-stream)
-    (write-line "end_of_file." process-input-stream)
-    (finish-output process-input-stream)
+    ;; Write the translated Prolog KB to a local file.
+    (with-open-file (file-stream (namestring local-kb-pathname) :direction :output :if-exists :supersede)
+      (write-line prolog-kb-string file-stream)
+      (finish-output file-stream))
+
+    ;; Compile the PSOA document in the engine.
+    (consult-local-file "local-KB.pl" process-input-stream)
 
     ;; Loading the server engine, which is initialized automatically
     ;; within the module via a ":- initialization(...)." directive.
-    (write-string "consult('" process-input-stream)
-    (write-string (directory-namestring (asdf:system-source-directory "psoatransrun"))
-                  process-input-stream)
-    (write-string (cdr (assoc system system-servers)) process-input-stream)
-    (write-line   "')." process-input-stream)
-    (finish-output process-input-stream)
+    (consult-local-file (cdr (assoc system system-servers)) process-input-stream)
 
     ;; Set the process slot of the engine client.
     (setf (prolog-engine-client-process engine-client) process)))
