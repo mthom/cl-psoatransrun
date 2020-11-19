@@ -194,7 +194,8 @@ is begun by an :- initialization(...) directive."
                                             #p"local-KB.pl")))
 
     ;; Write the translated Prolog KB to a local file.
-    (with-open-file (file-stream (namestring local-kb-pathname) :direction :output :if-exists :supersede)
+    (with-open-file (file-stream (namestring local-kb-pathname)
+                     :direction :output :if-exists :supersede)
       (write-line prolog-kb-string file-stream)
       (finish-output file-stream))
 
@@ -206,7 +207,7 @@ is begun by an :- initialization(...) directive."
     (consult-local-file (cdr (assoc system system-servers)) process-input-stream)
 
     ;; Set the process slot of the engine client.
-    (setf (prolog-engine-client-process engine-client) process)))
+    (set-prolog-engine-client-stream engine-client process)))
 
 
 (defun quit-prolog-engine (engine-client)

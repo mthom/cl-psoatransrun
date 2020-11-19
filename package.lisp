@@ -188,6 +188,7 @@
            #:prolog-engine-client-process
            #:process-input-stream
            #:process-output-stream
+           #:set-prolog-engine-client-stream
            #:terminate-engine-client))
 
 (defpackage #:psoatransrun
