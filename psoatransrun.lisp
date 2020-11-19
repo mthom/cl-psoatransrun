@@ -103,16 +103,17 @@ comma-separated Prolog goals. The test suite, however, reads test case
 solution sets as strings of space-separated PSOA RuleML equations,
 which demands a different grammar to be parsed."
   (loop for solution = (read-line stream nil nil)
+        for trimmed-solution = (string-right-trim '(#\Return #\Newline) solution)
         if (null solution)
           collect "no" into solutions
           and do (return solutions)
-        else if (equalp solution "No")
-               collect "no" into solutions
-               and do (return solutions)
-        else if (equalp solution "Yes")
-               collect "yes" into solutions
-        else if (not (xsb-message-p solution))
-               collect (parse grammar (trim-solution-string solution))
+        else if (equalp trimmed-solution "No")
+          collect "no" into solutions
+          and do (return solutions)
+        else if (equalp trimmed-solution "Yes")
+          collect "yes" into solutions
+        else if (not (xsb-message-p trimmed-solution))
+          collect (parse grammar (trim-solution-string trimmed-solution))
           into solutions))
 
 (defun print-solutions (solutions)

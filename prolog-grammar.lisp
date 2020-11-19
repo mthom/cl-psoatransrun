@@ -13,7 +13,7 @@ pretty printer defined in #:psoa-pprint.
 |#
 
 (defrule whitespace
-    (+ (or #\Space #\Tab #\Newline (and #\Return #\Newline)))
+    (+ (or #\Space #\Tab #\Newline #\Return (and #\Return #\Newline)))
   (:constant nil))
 
 (defrule goal-sequence
