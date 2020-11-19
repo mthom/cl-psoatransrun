@@ -350,8 +350,7 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
                           first-explicit-tuple-position)
                  condition
                (format stream
-                       "The descriptor list at position ~D contains an explicit tuple at position ~D ~
-                        occurring before an implicit tuple term at position ~D"
+                       "The descriptor list at position ~D contains an explicit tuple at position ~D occurring before an implicit tuple term at position ~D"
                        descriptors-position
                        first-explicit-tuple-position
                        implicit-term-position)))))
@@ -533,9 +532,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (let ((value (prefix-type-cast (ruleml-iri-contents sym-space) operand)))
            (if value
                value
-               (make-rule-expr
+               (make-ruleml-expr
                 :root sym-space
-                :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string)))))))
+                :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string)))
+                :position start))))
         (ruleml-pname-ln
          (let ((ns (ruleml-pname-ln-name sym-space))
                (local (ruleml-pname-ln-url sym-space)))
