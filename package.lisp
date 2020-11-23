@@ -180,14 +180,13 @@
 
 (defpackage #:prolog-engine-client
   (:use #:cl #:usocket)
-  (:export #:dequeue-query
-           #:enqueue-query
-           #:make-engine-client
+  (:export #:make-engine-client
            #:prolog-engine-client-path
            #:prolog-engine-client-host
            #:prolog-engine-client-process
-           #:process-input-stream
-           #:process-output-stream
+           #:prolog-engine-client-input-stream
+           #:prolog-engine-client-output-stream
+           #:prolog-engine-output-stream
            #:set-prolog-engine-client-stream
            #:terminate-engine-client))
 

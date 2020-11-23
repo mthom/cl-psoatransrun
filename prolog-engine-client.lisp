@@ -21,13 +21,13 @@ it by cl-psoatransrun. It receives query strings it evaluates against
 the translated KB, and sends back answer strings."
   (host :scryer :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
   (path #p"" :type pathname)
-  (pending-query nil :type (or null string)) ;; A pending query, i.e., one that prompted a KB recompilation.
   process ;; An object representing the Prolog subprocess.
-  )
+  input-stream
+  output-stream)
 
-(defstruct scryer-stream
-  "A structure containing a Scryer Prolog process and a usocket
-connected to that process."
+(defstruct scryer-client
+  "Represents the means of communicating with a Scryer Prolog server -- its subprocess
+and socket objects."
   process
   socket)
 
@@ -42,60 +42,40 @@ default. Processes are initialized separately."
            :host :xsb
            :path *default-xsb-prolog-path*))))
 
-(defun enqueue-query (engine-client query-string)
-  (setf (prolog-engine-client-pending-query engine-client)
-        query-string))
-
-(defun dequeue-query (engine-client)
-  (prog1 (prolog-engine-client-pending-query engine-client)
-    (enqueue-query engine-client nil)))
-
-(defun process-input-stream (engine-client)
-  (with-accessors ((host prolog-engine-client-host)
-                   (process prolog-engine-client-process))
+(defun close-prolog-engine-client (engine-client)
+  "Shutdown \"engine-client\" by closing the attached streams and socket,
+if one exists."
+  (with-slots (host process input-stream output-stream)
       engine-client
-    (ecase host
-      (:xsb (sb-ext:process-input process))
-      (:scryer (socket-stream (scryer-stream-socket process))))))
 
-(defun process-output-stream (engine-client)
-  (with-accessors ((host prolog-engine-client-host)
-                   (process prolog-engine-client-process))
-      engine-client
-    (ecase host
-      (:xsb (sb-ext:process-output process))
-      (:scryer (socket-stream (scryer-stream-socket process))))))
+    (close input-stream  :abort t)
+    (close output-stream :abort t)
 
-(defun close-prolog-engine-client-stream (engine-client)
-  (with-accessors ((host prolog-engine-client-host)
-                   (process prolog-engine-client-process))
-      engine-client
+    (setf input-stream  nil
+          output-stream nil)
+
     (ecase host
       (:xsb
-       (close (sb-ext:process-input process) :abort t)
-       (close (sb-ext:process-output process) :abort t)
-
        (sb-ext:process-wait process)
        (sb-ext:process-close process))
       (:scryer
-       (socket-close (scryer-stream-socket process))
+       (with-slots (process socket)
+           process
 
-       (close (sb-ext:process-input (scryer-stream-process process)) :abort t)
-       (close (sb-ext:process-output (scryer-stream-process process)) :abort t)
-
-       (sb-ext:process-wait (scryer-stream-process process))
-       (sb-ext:process-close (scryer-stream-process process))))))
+         (socket-close socket)
+         (sb-ext:process-wait process)
+         (sb-ext:process-close process))))))
 
 (defun sb-process-input-stream (engine-client)
   (sb-ext:process-input
    (ecase (prolog-engine-client-host engine-client)
      (:xsb (prolog-engine-client-process engine-client))
-     (:scryer (scryer-stream-process (prolog-engine-client-process engine-client))))))
+     (:scryer (scryer-client-process (prolog-engine-client-process engine-client))))))
 
 (defun terminate-engine-client (engine-client)
   (write-line "halt." (sb-process-input-stream engine-client))
   (finish-output (sb-process-input-stream engine-client))
-  (close-prolog-engine-client-stream engine-client))
+  (close-prolog-engine-client engine-client))
 
 (defun connect-to-prolog-engine-socket (process)
   (loop (handler-case
@@ -104,9 +84,15 @@ default. Processes are initialized separately."
           (parse-error ()))))
 
 (defun set-prolog-engine-client-stream (engine-client process)
-  (setf (prolog-engine-client-process engine-client)
-        (ecase (prolog-engine-client-host engine-client)
-          (:xsb process)
-          (:scryer (make-scryer-stream
-                    :process process
-                    :socket (connect-to-prolog-engine-socket process))))))
+  (with-slots ((process-slot process) input-stream output-stream)
+      engine-client
+    (ecase (prolog-engine-client-host engine-client)
+      (:xsb (setf input-stream  (sb-ext:process-input process)
+                  output-stream (sb-ext:process-output process)
+                  process-slot  process))
+      (:scryer (let ((socket (connect-to-prolog-engine-socket process)))
+                 (setf input-stream  (socket-stream socket)
+                       output-stream (socket-stream socket)
+                       process-slot  (make-scryer-client
+                                      :process process
+                                      :socket socket)))))))

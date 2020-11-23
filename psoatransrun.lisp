@@ -149,11 +149,8 @@ are caught and processed, the REPL resumes."
   "This function encapsulates a loop: read a query as a single line
 from standard input, translate the query to a Prolog query string,
 send it along to the engine, gather and print the solutions."
-  (loop for line = (let ((line (dequeue-query engine-client)))
-                     (if line
-                         line
-                         (progn (write-string "> ")
-                                (read-line *standard-input* nil))))
+  (loop for line = (progn (write-string "> ")
+                          (read-line *standard-input* nil))
         if line do (print-solutions (send-query-to-prolog-engine
                                      engine-client line
                                      prefix-ht relationships))))
@@ -165,10 +162,10 @@ stream. Read and collect the solution sets from the engine's output
 stream."
   (multiple-value-bind (query-string toplevel-var-string)
       (psoa-query->prolog query-string prefix-ht relationships)
-    (write-line query-string (process-input-stream engine-client))
-    (write-line toplevel-var-string (process-input-stream engine-client))
-    (force-output (process-input-stream engine-client))
-    (read-and-collect-solutions (process-output-stream engine-client))))
+    (write-line query-string (prolog-engine-client-input-stream engine-client))
+    (write-line toplevel-var-string (prolog-engine-client-input-stream engine-client))
+    (force-output (prolog-engine-client-input-stream engine-client))
+    (read-and-collect-solutions (prolog-engine-client-output-stream engine-client))))
 
 (defun consult-local-file (filename stream)
   "Preface filename with the source directory (which means it is a 'local' file)
@@ -215,8 +212,8 @@ is begun by an :- initialization(...) directive."
 \"end_of_file.\", and then by writing \"halt.\", to the process input
 stream. Wait for the process to close after closing the process input
 and output streams."
-  (write-line "end_of_file." (process-input-stream engine-client))
-  (finish-output (process-input-stream engine-client))
+  (write-line "end_of_file." (prolog-engine-client-input-stream engine-client))
+  (finish-output (prolog-engine-client-input-stream engine-client))
   (terminate-engine-client engine-client))
 
 (defun start-prolog-process (engine-client)
@@ -287,4 +284,7 @@ to close the process."
 
             ;; enqueue the instigating query for execution as soon as the Prolog
             ;; server is restarted with the re-compiled KB.
-            (enqueue-query engine-client instigating-query-string)))))))
+            (setf *standard-input*
+                  (make-concatenated-stream
+                   (make-string-input-stream instigating-query-string)
+                   *standard-input*))))))))

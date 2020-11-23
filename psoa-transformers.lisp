@@ -496,7 +496,8 @@ the value of the *is-relational-p* special variable."
         )
     (labels ((consider-atom (term head-atom)
                (if (is-relationship-p term prefix-ht)
-                   ;; pushnew refrains from pushing values to a list.
+                   ;; pushnew refrains from pushing a value to a list
+                   ;; if it finds it's already a member of the list.
                    (pushnew (length (ruleml-tuple-terms (first (ruleml-atom-descriptors head-atom))))
                             (gethash (predicate-name head-atom prefix-ht) relationships))
                    ;; prefix-ht is used to calculate predicate names for relationship keys.

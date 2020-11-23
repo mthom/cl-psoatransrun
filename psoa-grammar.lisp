@@ -8,7 +8,7 @@ preserving their structure and content. The types of the PSOA RuleML
 AST nodes constructed by the rules are defined in the package
 #:psoa-ast.
 
-The rules themsleves are specified in the rule notation of the esrap
+The rules themselves are specified in the rule notation of the esrap
 library, a backtracking packrat parser for Common Lisp, documented in:
 
 https://scymtym.github.io/esrap/
