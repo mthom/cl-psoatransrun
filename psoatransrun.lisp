@@ -2,6 +2,38 @@
 (in-package #:psoatransrun)
 
 #|
+#:psoatransrun defines two types of functions.
+
+Functions of the first type communicate with the underlying logic
+engine as a subprocess, a choice currently limited to either XSB
+Prolog or Scryer Prolog. The implementation details of the subprocess
+as a Lisp object are hidden behind the interface of the
+#:prolog-engine-client package.
+
+The engine client is used by #:psoatransrun as a bidirectional stream
+to which query text is sent and from which answer sets are received.
+
+The operations defined in other packages of cl-psoatransrun are
+applied sequentially in #:psoatransrun: PSOA RuleML KB and query
+strings are read from an input stream, parsed, transformed, translated
+to their Prolog counterparts, and sent to the engine; answer strings
+are received in Prolog notation, and in turn translated to their PSOA
+RuleML counterparts, which are reported back to the caller.
+
+This infrastructure is modular enough that it is used by both the REPL
+functions of #:psoatransrun and by the unit testing framework of
+#:psoatransrun-tests.
+
+The second type of functions are those composing the cl-psoatransrun
+REPL, or read-eval-print-loop. The REPL functions are responsible for
+loading the translated PSOA RuleML KB into the Prolog engine client,
+and kickstarting the Prolog-side server, itself a Prolog program, that
+evaluates PSOA RuleML queries it receives from cl-psoatransrun, to
+which it sends back answer sets.
+|#
+
+
+#|
 Global variables for command-line options.
 |#
 
@@ -81,7 +113,8 @@ quotes. This function removes the quotes if found."
 
 (defun xsb-message-p (string)
   "A predicate function used to detect XSB warning messages read from
-streams."
+streams. The XSB manual does not say whether it is possible to prevent
+the printing of these warnings using, e.g., a command line flag."
   (let ((warning-location (search "++Warning" string))
         (comment-location (search "% " string)))
     (or (and (numberp warning-location) (zerop warning-location))
@@ -141,16 +174,21 @@ and prints diagnostic errors thrown during parsing. After parse errors
 are caught and processed, the REPL resumes."
   (loop (handler-case (-psoa-repl engine-client prefix-ht relationships)
           (esrap:esrap-parse-error (condition)
+            ;; If a PSOA RuleML query can't be parsed, print a brief
+            ;; message giving the character offset where the parse
+            ;; error occurred.
             (format t "Parse error at ~A at position ~D~%"
                     (esrap:esrap-error-text condition)
                     (esrap:esrap-error-position condition))))))
 
 (defun print-prompt-and-read-line (stream)
-  "Print the '>' prompt if the input stream \"stream\" if no character
-is immediately available from it, and call read-line on it, returning
-nil on EOF."
-  (unless (listen stream) ;; If stream doesn't have pending input, print the prompt.
+  "Print the '>' prompt if the input stream \"stream\" does not offer
+an immediately available character and read from \"stream\"."
+  ;; If stream doesn't already have characters waiting to be read,
+  ;; print the REPL prompt.
+  (unless (listen stream)
     (write-string "> "))
+
   (read-line stream nil))
 
 (defun -psoa-repl (engine-client prefix-ht relationships)
@@ -206,34 +244,13 @@ is begun by an :- initialization(...) directive."
     ;; Compile the PSOA document in the engine.
     (consult-local-file "local-KB.pl" process-input-stream)
 
-    ;; Loading the server engine, which is initialized automatically
-    ;; within the module via a ":- initialization(...)." directive.
+    ;; Load and start the server program, which is initialized
+    ;; automatically within the server module via a ":-
+    ;; initialization(...)."  directive.
     (consult-local-file (cdr (assoc system system-servers)) process-input-stream)
 
     ;; Set the process slot of the engine client.
     (set-prolog-engine-client-stream engine-client process)))
-
-
-(defun quit-prolog-engine (engine-client)
-  "Terminate the Prolog engine, first by halting the server by writing
-\"end_of_file.\", and then by writing \"halt.\", to the process input
-stream. Wait for the process to close after closing the process input
-and output streams."
-  (write-line "end_of_file." (prolog-engine-client-input-stream engine-client))
-  (finish-output (prolog-engine-client-input-stream engine-client))
-  (terminate-engine-client engine-client))
-
-(defun start-prolog-process (engine-client)
-  "Launch the Prolog engine backend as a subprocess using the SBCL
-run-program extension. Obviously this isn't portable to other Common
-Lisp implementations."
-  (sb-ext:run-program (prolog-engine-client-path engine-client)
-                      (ecase (prolog-engine-client-host engine-client)
-                        (:xsb '("--nobanner" "--quietload" "--noprompt" "--nofeedback"))
-                        (:scryer '()))
-                      :input :stream
-                      :output :stream
-                      :wait nil))
 
 (defun psoa-load-and-repl (document &key (system :xsb))
   "Try to find the executable of the Prolog backend in the filesystem,
@@ -256,8 +273,8 @@ and launch the REPL.
 
 Upon abort or any other unresolvable error, execute quit-prolog-engine
 to close the process."
-  (multiple-value-bind (prolog-kb-string relationships is-relational-p
-                        prefix-ht document)
+  (multiple-value-bind (prolog-kb-string relationships
+                        is-relational-p prefix-ht document)
       (psoa-document->prolog document :system (prolog-engine-client-host engine-client))
 
     (loop
@@ -269,18 +286,20 @@ to close the process."
               (init-prolog-process engine-client prolog-kb-string process)
 
               (unwind-protect
-                   ;; If a call beneath psoa-repl invokes the recompile-non-relationally
-                   ;; restart, the stack is unwound, resulting in this unwind-protect
-                   ;; evaluating the (quit-prolog-engine ...) form before passing
-                   ;; control to the restart.
+                   ;; If a call beneath psoa-repl invokes the
+                   ;; recompile-non-relationally restart, the stack is
+                   ;; unwound, resulting in this unwind-protect
+                   ;; evaluating the (terminate-prolog-engine ...)
+                   ;; form before passing control to the restart.
                    (psoa-repl engine-client prefix-ht relationships)
-                (quit-prolog-engine engine-client)))
+                (terminate-prolog-engine engine-client)))
 
           (recompile-non-relationally (instigating-query-string)
-            ;; A non-relational query (here, instigating-query-string) can prompt
-            ;; a non-relational re-compilation of the KB. That's precisely
-            ;; what is done here, using the recompile-document-non-relationally
-            ;; transform of #:psoa-transformers.
+            ;; A non-relational query (here, instigating-query-string)
+            ;; can prompt a re-compilation of a relational KB as a
+            ;; non-relational KB. That task is performed here, using
+            ;; the recompile-document-non-relationally function of
+            ;; #:psoa-transformers.
             (multiple-value-setq (prolog-kb-string relationships is-relational-p)
               (translate-document (recompile-document-non-relationally document)
                                   :system (prolog-engine-client-host engine-client)))
@@ -289,8 +308,9 @@ to close the process."
             ;; Raise an error if this is not so.
             (assert (not is-relational-p))
 
-            ;; enqueue the instigating query for execution as soon as the Prolog
-            ;; server is restarted with the re-compiled KB.
+            ;; schedule the instigating query for execution
+            ;; immediately after re-compilation by prepending it to
+            ;; the *standard-input* stream.
             (setf *standard-input*
                   (make-concatenated-stream
                    (make-string-input-stream (format nil "~A~%" instigating-query-string))

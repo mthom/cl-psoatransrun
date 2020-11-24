@@ -126,7 +126,7 @@ further tests."
                            (progn (init-prolog-process engine-client prolog-kb-string process)
                                   (run-test-case test-kb-filename subdirectory engine-client
                                                  prefix-ht relationships))
-                        (quit-prolog-engine engine-client)))))
+                        (terminate-prolog-engine engine-client)))))
               (esrap:esrap-parse-error ()
                 (format t "Parse error in KB file ~A~%~%"
                         (file-namestring test-kb-filename)))

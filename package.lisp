@@ -191,7 +191,8 @@
            #:prolog-engine-client-output-stream
            #:prolog-engine-output-stream
            #:set-prolog-engine-client-stream
-           #:terminate-engine-client))
+           #:start-prolog-process
+           #:terminate-prolog-engine))
 
 (defpackage #:psoatransrun
   (:use #:cl #:drakma #:prolog-engine-client #:psoa-ast
@@ -204,10 +205,8 @@
            #:psoa-document->prolog
            #:psoa-load-and-repl
            #:psoa-query->prolog
-           #:quit-prolog-engine
            #:read-and-collect-solutions
-           #:send-query-to-prolog-engine
-           #:start-prolog-process)
+           #:send-query-to-prolog-engine)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoatransrun-tests

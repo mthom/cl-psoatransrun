@@ -72,10 +72,33 @@ if one exists."
      (:xsb (prolog-engine-client-process engine-client))
      (:scryer (scryer-client-process (prolog-engine-client-process engine-client))))))
 
-(defun terminate-engine-client (engine-client)
+(defun terminate-prolog-engine (engine-client)
+  "Terminate the Prolog engine, first by halting the server by writing
+\"end_of_file.\", and then by writing \"halt.\", to the process input
+stream. Wait for the process to close after closing the process input
+and output streams."
+  (write-line "end_of_file." (prolog-engine-client-input-stream engine-client))
+  (finish-output (prolog-engine-client-input-stream engine-client))
+
   (write-line "halt." (sb-process-input-stream engine-client))
   (finish-output (sb-process-input-stream engine-client))
   (close-prolog-engine-client engine-client))
+
+(defun start-prolog-process (engine-client)
+  "Launch the Prolog engine backend as a subprocess using the SBCL
+run-program extension. Obviously this function isn't portable to other
+Common Lisp implementations."
+  (sb-ext:run-program (prolog-engine-client-path engine-client)
+                      (ecase (prolog-engine-client-host engine-client)
+                        ;; These command line arguments are needed to
+                        ;; prevent junk output from clogging the XSB
+                        ;; output stream, which is used by
+                        ;; cl-psoatransrun to read solution sets.
+                        (:xsb '("--nobanner" "--quietload" "--noprompt" "--nofeedback"))
+                        (:scryer '()))
+                      :input :stream
+                      :output :stream
+                      :wait nil))
 
 (defun connect-to-prolog-engine-socket (process)
   (loop (handler-case
