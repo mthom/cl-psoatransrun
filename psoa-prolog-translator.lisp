@@ -307,7 +307,7 @@ predicate-indicator cell to be written."
                       ((ruleml-pname-ln :name ns :url local)
                        ;; Translate prefixed predicates according
                        ;; using the helper functions defined in
-                       ;; psoa-transformers.lisp.
+                       ;; psoa-ast.lisp.
                        (record-predicate-indicator
                         (write-url-const ns local prefix-ht)
                         0

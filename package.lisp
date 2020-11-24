@@ -83,6 +83,7 @@
            #:ruleml-exists
            #:ruleml-exists-vars
            #:ruleml-exists-formula
+           #:ruleml-genconst
            #:ruleml-const
            #:ruleml-const-contents
            #:ruleml-string
@@ -103,6 +104,7 @@
            #:ruleml-query-p
            #:ruleml-naf-p
            #:ruleml-number-p
+           #:ruleml-genconst-p
            #:ruleml-genvar-p
            #:ruleml-var-p
            #:ruleml-string-p
@@ -126,6 +128,7 @@
            #:ruleml-ast-node-position
            #:make-ruleml-document
            #:make-ruleml-const
+           #:make-ruleml-genconst
            #:make-ruleml-base
            #:make-ruleml-prefix
            #:make-ruleml-import

@@ -41,6 +41,9 @@ EBNF
   "A PSOA RuleML constant."
   (contents "" :type (or string number ruleml-pname-ln)))
 
+(defstruct (ruleml-genconst (:include ruleml-const))
+  "A PSOA RuleML constant generated at runtime.")
+
 (defstruct (ruleml-string (:include ruleml-ast-node))
   "A PSOA RuleML string, whose literal syntax is standard (written
 between double quotation marks)."

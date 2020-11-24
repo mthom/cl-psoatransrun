@@ -35,7 +35,7 @@ KB/query."
   "Generate a new constant with an original name, not equal to any
 previously existing, similarly to how fresh-variable works with
 respect to variables."
-  (make-ruleml-const :contents (string-downcase (format nil "~A" (gensym prefix)))))
+  (make-ruleml-genconst :contents (string-downcase (format nil "~A" (gensym prefix)))))
 
 (defun fresh-skolem-constant ()
   "Generate a fresh constant with prefix \"skolem\"."
@@ -343,7 +343,9 @@ function term OIDs for atoms left oidless in the KB."
 (defun is-relationship-p (term prefix-ht)
   "Similarly to ground-atom-p, search the internals of \"term\" for
 proof that it is not a relationship. is-relationship-p is always
-called in the context of a KB atom."
+called in the context of a KB atom. If term contains generated
+variables or generated constants, term is presumed to contain atom
+OIDs, making it non-relational."
   ;; if-it is an anaphoric macro binding the return value of
   ;; (predicate-name term prefix-ht) to the symbol "it" in the scope
   ;; of its true branch form.
@@ -366,6 +368,8 @@ called in the context of a KB atom."
                              (when (string= it (predicate-name term prefix-ht))
                                (return-from is-relationship-p nil))
                              term)
+                            ((or (ruleml-genvar) (ruleml-genconst))
+                             (return-from is-relationship-p nil))
                             (_ term))))
          (return-from is-relationship-p nil))
   t)
