@@ -145,12 +145,19 @@ are caught and processed, the REPL resumes."
                     (esrap:esrap-error-text condition)
                     (esrap:esrap-error-position condition))))))
 
+(defun print-prompt-and-read-line (stream)
+  "Print the '>' prompt if the input stream \"stream\" if no character
+is immediately available from it, and call read-line on it, returning
+nil on EOF."
+  (unless (listen stream) ;; If stream doesn't have pending input, print the prompt.
+    (write-string "> "))
+  (read-line stream nil))
+
 (defun -psoa-repl (engine-client prefix-ht relationships)
   "This function encapsulates a loop: read a query as a single line
 from standard input, translate the query to a Prolog query string,
 send it along to the engine, gather and print the solutions."
-  (loop for line = (progn (write-string "> ")
-                          (read-line *standard-input* nil))
+  (loop for line = (print-prompt-and-read-line *standard-input*)
         if line do (print-solutions (send-query-to-prolog-engine
                                      engine-client line
                                      prefix-ht relationships))))
@@ -286,5 +293,5 @@ to close the process."
             ;; server is restarted with the re-compiled KB.
             (setf *standard-input*
                   (make-concatenated-stream
-                   (make-string-input-stream instigating-query-string)
+                   (make-string-input-stream (format nil "~A~%" instigating-query-string))
                    *standard-input*))))))))
