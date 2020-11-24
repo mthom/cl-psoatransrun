@@ -28,8 +28,8 @@ The second type of functions are those composing the cl-psoatransrun
 REPL, or read-eval-print-loop. The REPL functions are responsible for
 loading the translated PSOA RuleML KB into the Prolog engine client,
 and kickstarting the Prolog-side server, itself a Prolog program, that
-evaluates PSOA RuleML queries it receives from cl-psoatransrun, to
-which it sends back answer sets.
+evaluates PSOA RuleML queries it receives from cl-psoatransrun, and to
+which it enumerates answer bindings.
 |#
 
 
@@ -112,9 +112,10 @@ quotes. This function removes the quotes if found."
       solution-string))
 
 (defun xsb-message-p (string)
-  "A predicate function used to detect XSB warning messages read from
-streams. The XSB manual does not say whether it is possible to prevent
-the printing of these warnings using, e.g., a command line flag."
+  "A predicate function used to detect XSB warning messages in
+\"string\". The XSB manual does not say whether it is possible to
+prevent the printing of these warnings using, e.g., a command line
+flag."
   (let ((warning-location (search "++Warning" string))
         (comment-location (search "% " string)))
     (or (and (numberp warning-location) (zerop warning-location))
@@ -127,8 +128,7 @@ is reached, a state signified by \"solutions\" being bound to NIL.
 
 \"solutions\" may contain lists of ruleml-ast-node subtyped objects
 produced by parsing the string against the esrap rule \"grammar\", an
-optional argument whose the default value is
-'prolog-grammar::goal-sequence.
+optional argument whose default value is 'prolog-grammar::goal-sequence.
 
 The default is appropriate for the cl-psoatransrun REPL, as solution
 sets are returned from the Prolog engine backend as strings of
@@ -136,6 +136,7 @@ comma-separated Prolog goals. The test suite, however, reads test case
 solution sets as strings of space-separated PSOA RuleML equations,
 which demands a different grammar to be parsed."
   (loop for solution = (read-line stream nil nil)
+	;; Read characters into the string \"solution\" until a #\Newline is encountered.
         for trimmed-solution = (string-right-trim '(#\Return #\Newline) solution)
         if (null solution)
           collect "no" into solutions

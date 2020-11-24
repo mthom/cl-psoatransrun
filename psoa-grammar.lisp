@@ -336,6 +336,26 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
     (and term (! #\#) (? psoa-rest))
   (:destructure (root not-hash descriptors &bounds start)
     (declare (ignore not-hash))
+    #|
+    atom-oidless-short must distinguish these cases
+    at the type level:
+    
+    p    <-- a const (ruleml-const)
+    p()  <-- an atom (ruleml-atom)
+    
+    either can be parsed by atom-oidless-short.
+    
+    in both cases, descriptors will be bound to nil / ().
+    
+    question: if descriptors is nil in either case, how do we know to wrap root in a
+    ruleml-const struct or a ruleml-atom struct?
+    
+    answer: if descriptors, the value parsed by the subexpression (? psoa-rest),
+    returns t, then "p()" was parsed, indicating we should construct a ruleml-atom.
+    (see the definition of psoa-rest).
+    
+    otherwise, descriptors is (), indicating we should construct a ruleml-const.
+    |#
     (cond ((null descriptors) root)
           ((eql descriptors t)
            (if (or (ruleml-atom-p root)
