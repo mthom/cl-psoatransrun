@@ -3,15 +3,13 @@
 
 #|
 This package contains functions for pretty-printing objects whose
-supertype is ruleml-ast-node, all of which are defined in
-psoa-ast.lisp (i.e., the content of the package #:psoa-ast).
+supertype is ruleml-ast-node, all of which are defined in #:psoa-ast.
 
 While objects of supertype ruleml-ast-node are assembled from string
 KBs into PSOA RuleML ASTs by the EBNF-like grammar rules of
-psoa-grammar.lisp, the functions here perform the inverse function:
-they convert PSOA RuleML ASTs back to the string representations of
-the PSOA RuleML KBs approximately like those from which they were
-produced.
+#:psoa-grammar, the functions here perform the inverse operation: they
+convert PSOA RuleML ASTs back to string representations of PSOA RuleML
+KBs approximately like those from which they were produced.
 
 Documentation of the Common Lisp Pretty Printing System, which is used
 extensively in this package, is available here:

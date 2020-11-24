@@ -156,8 +156,8 @@ subterms are synonymously embedded terms."
                         (make-ruleml-oidful-atom ;; Attach an OID to the embedded oidless atom term.
                          :oid oid
                          :predicate
-                         #1=(make-ruleml-atom :root (walker root)
-                                              :descriptors (mapcar #`(walker %) descriptors))))
+                         (make-ruleml-atom :root (walker root)
+                                           :descriptors (mapcar #`(walker %) descriptors))))
                       (let ((in-psoa-rest-p t)) ;; Otherwise, term is a top-level (non-embedded) atom.
                         ;; in-psoa-rest is now t, as we are about to recurse downward into term.
                         (declare (special in-psoa-rest-p))
@@ -387,7 +387,6 @@ objectify-dynamic, which is used to introduce ad hoc OIDs at query
 time. In this way, we avoid needlessly objectifying relational
 predicates."
   (if (and positive negative) ;; We are objectifying a query atom.
-      ;; 2
       (match term
         ((ruleml-atom :root root :descriptors descriptors)
          (cond ((when-it (gethash root relationships)

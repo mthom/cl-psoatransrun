@@ -2,25 +2,20 @@
 (in-package #:prolog-grammar)
 
 #|
-
 A simplified Prolog parser written in esrap rules representing Prolog
 goals and equalities in terms of the ruleml-ast-node subtyped structs
 of #:psoa-ast. The Prolog server returns solution strings in Prolog
 notation, which are parsed on the Lisp side as PSOA RuleML ASTs, and
 printed back to the REPL and to the test suite, using the PSOA RuleML
 pretty printer defined in #:psoa-pprint.
-
 |#
 
-(defrule whitespace
-    (+ (or #\Space #\Tab #\Newline #\Return (and #\Return #\Newline)))
-  (:constant nil))
 
 (defrule goal-sequence
     (and goal
-         (* whitespace)
-         (? (and #\, (* whitespace) goal-sequence))
-         (* whitespace))
+         (* psoa-grammar::whitespace)
+         (? (and #\, (* psoa-grammar::whitespace) goal-sequence))
+         (* psoa-grammar::whitespace))
   (:destructure (goal ws1 goals ws2)
     (declare (ignore ws1 ws2))
     (if goals
@@ -31,7 +26,7 @@ pretty printer defined in #:psoa-pprint.
     (or equals-goal functor-goal))
 
 (defrule equals-goal
-    (and (or "=(" "'='(") arg "," (* whitespace) arg ")")
+    (and (or "=(" "'='(") arg "," (* psoa-grammar::whitespace) arg ")")
   (:destructure (equals left comma ws right rparen)
     (declare (ignore equals comma ws rparen))
     (make-ruleml-equal :left left :right right)))
@@ -45,8 +40,8 @@ pretty printer defined in #:psoa-pprint.
 
 (defrule arg-list
     (and arg
-         (* whitespace)
-         (? (and #\, (* whitespace) arg-list)))
+         (* psoa-grammar::whitespace)
+         (? (and #\, (* psoa-grammar::whitespace) arg-list)))
   (:destructure (arg ws arg-list)
     (declare (ignore ws))
     (if arg-list

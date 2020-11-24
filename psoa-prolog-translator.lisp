@@ -21,10 +21,10 @@ its reported solutions."
                      (when (ruleml-genvar-p term)
                        (pushnew (ruleml-var-name term) query-vars))
                      term))
-    (-translate (ruleml-query-term query)
-                prefix-ht
-                output-stream
-                nil)
+    (translate-item (ruleml-query-term query)
+                    prefix-ht
+                    output-stream
+                    nil)
     (values (format nil "~A." (get-output-stream-string output-stream))
             (format nil "[~{Q~A~^, ~}]." query-vars))))
 
@@ -129,20 +129,20 @@ for later sorting purposes."
          (setf relationships assert-relationships
                is-relational-p assert-is-relational-p)
          (dolist (item items)
-           ;; -translate returns a single predicate indicator describing the top-level
+           ;; translate-item returns a single predicate indicator describing the top-level
            ;; predicate it translated and wrote to prolog-kb-stream.
-           (let ((item-predicate-indicator (-translate item prefix-ht prolog-kb-stream)))
+           (let ((item-predicate-indicator (translate-item item prefix-ht prolog-kb-stream)))
              (push item-predicate-indicator predicate-indicators)
              (format prolog-kb-stream ".~%"))))
         ((ruleml-query :term query-term)
          (format prolog-kb-stream "?- ~A."
-                 (-translate query-term prefix-ht prolog-kb-stream)))))
+                 (translate-item query-term prefix-ht prolog-kb-stream)))))
     (values (get-output-stream-string prolog-kb-stream)
             relationships
             is-relational-p
             (nreverse predicate-indicators))))
 
-(defun -translate (item prefix-ht stream &optional (assert-item-p t))
+(defun translate-item (item prefix-ht stream &optional (assert-item-p t))
   "Translate a single KB item (either an Assert item or Query formula)
 to its Prolog transformation and write the result to the output stream
 \"stream\". If assert-item-p is true, predicate-indicator information
@@ -176,13 +176,18 @@ predicate-indicator cell to be written."
                      :oid oid
                      :predicate (ruleml-atom :root (ruleml-const :contents "Top")
                                              :descriptors (list (ruleml-tuple :terms terms))))
-                    ;; This is an oidful atom with a single (either dependent or independent!)
-                    ;; descriptor, hence we use "tupterm", that
-                    ;; contains just the OID and however many
-                    ;; arguments are in the tuple. We should record
-                    ;; the predicate indicator "tupterm"/(1+ (length
-                    ;; terms)) to the predicate-indicators cell if
-                    ;; this atom exists at the top-level of a KB.
+                    ;; This is an oidful atom with a single (either
+                    ;; dependent or independent!) descriptor, hence
+                    ;; we use "tupterm" containing just the OID and
+                    ;; however many arguments are in the tuple. We
+                    ;; should record the predicate indicator
+                    ;; "tupterm"/(1+ (length terms)) to the
+                    ;; predicate-indicators cell if this atom exists
+                    ;; at the top-level of a KB.
+
+                    ;; Because record-predicate-indicator is a macro
+                    ;; and not a function, the form (1+ (length terms))
+                    ;; isn't evaluated unless recordp is t.
                     (record-predicate-indicator "tupterm" (1+ (length terms)) recordp)
                     (if terms
                         (format stream "tupterm(~A, ~{~A~^, ~})"

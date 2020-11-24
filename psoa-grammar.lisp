@@ -78,8 +78,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (base ws1 lparen ws2 iri-ref ws3 rparen ws4 &bounds start)
-                (declare (ignore base ws1 lparen ws2 ws3 rparen ws4))
-                (make-ruleml-base :iri-ref iri-ref :position start)))
+    (declare (ignore base ws1 lparen ws2 ws3 rparen ws4))
+    (make-ruleml-base :iri-ref iri-ref :position start)))
 
 (defrule prefix
     (and "Prefix"
@@ -110,10 +110,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (import ws1 lparen ws2 iri-ref ws3 profile ws4 rparen ws5 &bounds start)
-                (declare (ignore import ws1 lparen ws2 ws3 rparen ws4 ws5))
-                (make-ruleml-import :iri-ref iri-ref
-                                    :profile profile
-                                    :position start)))
+    (declare (ignore import ws1 lparen ws2 ws3 rparen ws4 ws5))
+    (make-ruleml-import :iri-ref iri-ref
+                        :profile profile
+                        :position start)))
 
 (defrule assert
     (and (or "Assert" "Group")
@@ -123,8 +123,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (assert ws1 lparen rules rparen ws2 &bounds start)
-                (declare (ignore assert ws1 lparen rparen ws2))
-                (make-ruleml-assert :items (remove nil rules) :position start)))
+    (declare (ignore assert ws1 lparen rparen ws2))
+    (make-ruleml-assert :items (remove nil rules) :position start)))
 
 (defrule query
     (and "Query"
@@ -136,9 +136,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (query ws1 lparen ws2 formula ws3 rparen ws4 &bounds start)
-                (declare (ignore query ws1 lparen ws2 ws3 rparen ws4))
-                (make-ruleml-query :term formula
-                                   :position start)))
+    (declare (ignore query ws1 lparen ws2 ws3 rparen ws4))
+    (make-ruleml-query :term formula :position start)))
 
 (defrule rule
     (or forall-clause clause))
@@ -153,10 +152,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (forall vars lparen ws1 clause ws2 rparen ws3 &bounds start)
-                (declare (ignore forall lparen ws1 ws2 rparen ws3))
-                (make-ruleml-forall :vars (remove nil vars)
-                                    :clause clause
-                                    :position start)))
+    (declare (ignore forall lparen ws1 ws2 rparen ws3))
+    (make-ruleml-forall :vars (remove nil vars)
+                        :clause clause
+                        :position start)))
 
 (defrule clause
     (or implies head))
@@ -168,10 +167,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          formula)
   (:destructure (head ws1 implies ws2 formula &bounds start)
-                (declare (ignore ws1 implies ws2))
-                (make-ruleml-implies :conclusion head
-                                     :condition formula
-                                     :position start)))
+    (declare (ignore ws1 implies ws2))
+    (make-ruleml-implies :conclusion head
+                         :condition formula
+                         :position start)))
 
 (defrule head
     (or head-and head-exists atomic))
@@ -184,9 +183,9 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          #\))
   (:destructure (naf lbrack ws1 formula ws2 rbrack &bounds start)
-                (declare (ignore naf lbrack ws1 ws2 rbrack))
-                (make-ruleml-naf :formula formula
-                                 :position start)))
+    (declare (ignore naf lbrack ws1 ws2 rbrack))
+    (make-ruleml-naf :formula formula
+                     :position start)))
 
 (defrule head-exists
     (and "Exists"
@@ -197,9 +196,9 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          #\))
   (:destructure (exists vars lparen ws1 formula ws2 rparen &bounds start)
-                (declare (ignore exists ws1 ws2 lparen rparen))
-                (make-ruleml-exists :vars (remove nil vars)
-                                    :formula formula
+    (declare (ignore exists ws1 ws2 lparen rparen))
+    (make-ruleml-exists :vars (remove nil vars)
+                        :formula formula
                                     :position start)))
 
 (defrule head-and
@@ -210,9 +209,9 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (and ws1 lparen formulas rparen ws2 &bounds start)
-                (declare (ignore and ws1 lparen rparen ws2))
-                (make-ruleml-and :terms (remove nil formulas)
-                                 :position start)))
+    (declare (ignore and ws1 lparen rparen ws2))
+    (make-ruleml-and :terms (remove nil formulas)
+                     :position start)))
 
 (defrule profile
     angle-bracket-iri)
@@ -238,16 +237,14 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule and-formula
     (and "And" (* (or whitespace comment)) #\( formula-list #\))
   (:destructure (and ws1 lparen formulas rparen &bounds start)
-                (declare (ignore and ws1 lparen rparen))
-                (make-ruleml-and :terms formulas
-                                 :position start)))
+    (declare (ignore and ws1 lparen rparen))
+    (make-ruleml-and :terms formulas :position start)))
 
 (defrule or-formula
     (and "Or" (* (or whitespace comment)) #\( (* (or formula whitespace comment)) #\))
   (:destructure (or ws1 lparen formulas rparen &bounds start)
-                (declare (ignore or ws1 lparen rparen))
-                (make-ruleml-or :terms (remove nil formulas)
-                                :position start)))
+    (declare (ignore or ws1 lparen rparen))
+    (make-ruleml-or :terms (remove nil formulas) :position start)))
 
 (defrule exists-formula
     (and "Exists"
@@ -259,10 +256,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          #\))
   (:destructure (exists vars ws1 lparen ws2 formula ws3 rparen &bounds start)
-                (declare (ignore exists ws1 ws2 lparen ws3 rparen))
-                (make-ruleml-exists :vars (remove nil vars)
-                                    :formula formula
-                                    :position start)))
+    (declare (ignore exists ws1 ws2 lparen ws3 rparen))
+    (make-ruleml-exists :vars (remove nil vars)
+                        :formula formula
+                        :position start)))
 
 (defrule external-formula
     (and "External"
@@ -273,8 +270,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          #\))
   (:destructure (external ws1 lparen ws2 atom ws3 rparen &bounds start)
-                (declare (ignore external ws1 lparen ws2 ws3 rparen))
-                (make-ruleml-external :atom atom :position start)))
+    (declare (ignore external ws1 lparen ws2 ws3 rparen))
+    (make-ruleml-external :atom atom :position start)))
 
 (defrule atomic
     (or subclass equal atom))
@@ -289,8 +286,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or whitespace comment))
          term)
   (:destructure (left ws1 equal ws2 right &bounds start)
-                (declare (ignore ws1 equal ws2))
-                (make-ruleml-equal :left left :right right :position start)))
+    (declare (ignore ws1 equal ws2))
+    (make-ruleml-equal :left left :right right :position start)))
 
 (defrule subclass
     (and term
@@ -306,7 +303,7 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
     (or atom expr))
 
 (defrule atom-oidful
-    (and (or atom-oidful expr subterm)
+    (and subterm
          #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
@@ -317,28 +314,40 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
         (make-ruleml-membership :oid oid :predicate atom :position start))))
 
 (defrule atom-oidless
-    (or atom-oidless-short atom-oidless-long))
+    (or atom-oidless-long atom-oidless-short))
 
-(defrule atom-oidless-short
-    (and term (! #\#) (? psoa-rest))
-  (:destructure (root not-hash descriptors &bounds start)
-    (declare (ignore not-hash))
-    (let ((descriptors (remove nil descriptors)))
-      (make-ruleml-atom :root root
-                        :descriptors descriptors
-                        :position start))))
 
 (defrule atom-oidless-long
     (and #\#
          (! (or #\# whitespace comment))
          atom-oidless-short)
-  (:destructure (hash not-hash atom-oidless-short &bounds start)
+  (:destructure (hash not-hash atom &bounds start)
     (declare (ignore hash not-hash))
-    (if (ruleml-atom-p atom-oidless-short)
-        atom-oidless-short
-        (make-ruleml-atom :root atom-oidless-short
+    (if (or (ruleml-atom-p atom)
+            (ruleml-oidful-atom-p atom)
+            (ruleml-membership-p atom)
+            (ruleml-expr-p atom))
+        atom
+        (make-ruleml-atom :root atom
                           :descriptors nil
                           :position start))))
+
+(defrule atom-oidless-short
+    (and term (! #\#) (? psoa-rest))
+  (:destructure (root not-hash descriptors &bounds start)
+    (declare (ignore not-hash))
+    (cond ((null descriptors) root)
+          ((eql descriptors t)
+           (if (or (ruleml-atom-p root)
+                   (ruleml-oidful-atom-p root)
+                   (ruleml-membership-p root)
+                   (ruleml-expr-p root))
+               root
+               (make-ruleml-atom :root root
+                                 :position start)))
+          (t (make-ruleml-atom :root root
+                               :descriptors descriptors
+                               :position start)))))
 
 (define-condition implicit-and-explicit-tuples-in-same-atom (error)
   ((descriptors-position :initarg :descriptors-position)
@@ -403,7 +412,17 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\))
   (:destructure (lparen ws1 descriptors ws2 rparen &bounds start)
     (declare (ignore ws1 lparen ws2 rparen))
-    (check-descriptors (remove nil descriptors) (1+ start))))
+    ;; If descriptors is empty, inform atom-oidless-short that
+    ;; psoa-rest was triggered by returning t, signifying that
+    ;; atom-oidless-short must construct an atom, despite descriptors
+    ;; being '().
+    ;;
+    ;; If on the other hand psoa-rest was not triggered,
+    ;; atom-oidless-short will know by finding descriptors to be NIL.
+    (let ((descriptors (check-descriptors (remove nil descriptors) (1+ start))))
+      (if (null descriptors)
+          t
+          descriptors))))
 
 (defrule psoa-rest-list
     (and (or slot-di tuple-di subterm)
@@ -416,10 +435,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
         (list subterm))))
 
 (defrule expr
-    (or expr-short expr-long))
+    (or expr-long expr-short))
 
 (defrule expr-short
-    (and subterm
+    (and (or const subterm)
          #\(
 	     (* (or whitespace comment))
          (or (+ (and subterm (! "+>") (* (or whitespace comment))))
@@ -427,19 +446,19 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (and slot-d (* (or whitespace comment))))
          #\))
   (:destructure (root lparen ws tuple-terms slot-terms rparen &bounds start)
-                (declare (ignore lparen ws rparen))
-                (let* ((remove-nil-from-sublists (alexandria:compose #'first (alexandria:curry #'remove nil)))
-                       (tuple-terms (mapcar remove-nil-from-sublists tuple-terms))
-                       (slot-terms  (mapcar remove-nil-from-sublists slot-terms)))
-                  (make-ruleml-expr :root root
-                                    :terms (append tuple-terms slot-terms)
-                                    :position start))))
+    (declare (ignore lparen ws rparen))
+    (let* ((remove-nil-from-sublists (alexandria:compose #'first (alexandria:curry #'remove nil)))
+           (tuple-terms (mapcar remove-nil-from-sublists tuple-terms))
+           (slot-terms  (mapcar remove-nil-from-sublists slot-terms)))
+      (make-ruleml-expr :root root
+                        :terms (append tuple-terms slot-terms)
+                        :position start))))
 
 (defrule expr-long
     (and #\^ expr-short)
   (:destructure (hat expr)
-                (declare (ignore hat))
-                expr))
+    (declare (ignore hat))
+    expr))
 
 (defrule tuple-di
     (and (or plus-sign minus-sign)
@@ -447,11 +466,11 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or subterm whitespace comment))
          #\])
   (:destructure (dep lsqbrack terms rsqbrack &bounds start)
-                (declare (ignore lsqbrack rsqbrack))
-                (let ((dep (string= dep "+")))
-                  (make-ruleml-tuple :dep dep
-                                     :terms (remove nil terms)
-                                     :position start))))
+    (declare (ignore lsqbrack rsqbrack))
+    (let ((dep (string= dep "+")))
+      (make-ruleml-tuple :dep dep
+                         :terms (remove nil terms)
+                         :position start))))
 
 (defrule tuple-d
     (and plus-sign
@@ -459,22 +478,22 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          (* (or subterm whitespace comment))
          #\])
   (:destructure (plus-sign lsqbrack terms rsqbrack &bounds start)
-                (declare (ignore plus-sign lsqbrack rsqbrack))
-                (make-ruleml-tuple :dep t
-                                   :terms (remove nil terms)
-                                   :position start)))
+    (declare (ignore plus-sign lsqbrack rsqbrack))
+    (make-ruleml-tuple :dep t
+                       :terms (remove nil terms)
+                       :position start)))
 
 (defrule slot-di
     (and subterm (or "+>" "->") subterm)
   (:destructure (name dep filler &bounds start)
-                (let ((dep (string= dep "+>")))
-                  (make-ruleml-slot :dep dep :name name :filler filler :position start))))
+    (let ((dep (string= dep "+>")))
+      (make-ruleml-slot :dep dep :name name :filler filler :position start))))
 
 (defrule slot-d
     (and subterm "+>" subterm)
   (:destructure (term1 dep-sign term2 &bounds start)
-                (declare (ignore dep-sign))
-                (make-ruleml-slot :dep t :name term1 :filler term2 :position start)))
+    (declare (ignore dep-sign))
+    (make-ruleml-slot :dep t :name term1 :filler term2 :position start)))
 
 (defrule term
     (or external-expr
@@ -485,11 +504,11 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 
 (defrule subterm
     (or external-expr
-        expr
         atom-oidful
-        const ;;(and const (! (or #\# #\()))
-        var   ;;(and var (! (or #\# #\()))
-        atom-oidless-long))
+        expr
+        atom-oidless-long
+        const
+        var))
 
 (defrule external-expr
     (and "External"
@@ -558,10 +577,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule var
     (and #\? (? pn-local))
   (:destructure (question-mark pn-local &bounds start)
-                (declare (ignore question-mark))
-                (if pn-local
-                    (make-ruleml-var :name pn-local :position start)
-                    (psoa-transformers::fresh-variable))))
+    (declare (ignore question-mark))
+    (if pn-local
+        (make-ruleml-var :name pn-local :position start)
+        (psoa-transformers::fresh-variable))))
 
 
 ;; Lexical analysis.
@@ -645,8 +664,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule echar
     (and #\\ (character-ranges #\t #\b #\n #\r #\f #\\ #\" #\'))
   (:destructure (backslash char)
-                (declare (ignore backslash))
-                char))
+    (declare (ignore backslash))
+    char))
 
 (defrule eol
     (or #\newline #\return))
@@ -836,8 +855,8 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule integer-positive
     (and plus-sign (& digit) integer)
   (:destructure (minus-sign lookahead integer)
-                (declare (ignore minus-sign lookahead))
-                integer))
+    (declare (ignore minus-sign lookahead))
+    integer))
 
 (defrule integer-negative
     (and minus-sign (& digit) integer)

@@ -1,6 +1,11 @@
 
 (in-package #:psoa-ast)
 
+#|
+
+|#
+
+
 (eval-when (:compile-toplevel :load-toplevel)
   (setf *arity-check-by-test-call* nil))
 
@@ -37,8 +42,8 @@ EBNF
   (contents "" :type (or string number ruleml-pname-ln)))
 
 (defstruct (ruleml-string (:include ruleml-ast-node))
-  "Represents a PSOA RuleML string, whose literal syntax is
-standard (written between double quotation marks)."
+  "A PSOA RuleML string, whose literal syntax is standard (written
+between double quotation marks)."
   (contents "" :type string))
 
 (defstruct (ruleml-import (:include ruleml-ast-node))
@@ -269,11 +274,11 @@ in conjunction with the \"^^\" operator."
 
 (defun transform-ast (term key &key positive negative external
                                  (propagator
-                                  (lambda (term &key (positive positive) (negative negative)
-                                                  (external external))
+                                  (lambda (term &key positive negative external)
                                     (transform-ast term key
-                                                   :positive positive :negative negative
-                                                   :external external))))
+                                     :positive positive
+                                     :negative negative
+                                     :external external))))
   "Performs a post-order traversal of an abstract syntax tree of PSOA
 RuleML nodes, all of which have supertype ruleml-ast-node.
 
