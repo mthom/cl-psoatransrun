@@ -11,7 +11,7 @@ as a Lisp object are hidden behind the interface of the
 #:prolog-engine-client package.
 
 The engine client is used by #:psoatransrun as a bidirectional stream
-to which query text is sent and from which answer sets are received.
+to which query text is sent and from which answer bindings are received.
 
 The operations defined in other packages of cl-psoatransrun are
 applied sequentially in #:psoatransrun: PSOA RuleML KB and query
@@ -122,7 +122,7 @@ flag."
         (and (numberp comment-location) (zerop comment-location)))))
 
 (defun read-and-collect-solutions (stream &optional (grammar 'prolog-grammar::goal-sequence))
-  "Read lines of text representing solution sets from \"stream\" and
+  "Read lines of text representing answer bindings from \"stream\" and
 collect them into the list \"solutions\" until the end of \"stream\"
 is reached, a state signified by \"solutions\" being bound to NIL.
 
@@ -133,10 +133,11 @@ optional argument whose default value is 'prolog-grammar::goal-sequence.
 The default is appropriate for the cl-psoatransrun REPL, as solution
 sets are returned from the Prolog engine backend as strings of
 comma-separated Prolog goals. The test suite, however, reads test case
-solution sets as strings of space-separated PSOA RuleML equations,
+answer bindings as strings of space-separated PSOA RuleML equations,
 which demands a different grammar to be parsed."
+
+  ;; Read characters into the string \"solution\" until a #\Newline is encountered.
   (loop for solution = (read-line stream nil nil)
-	;; Read characters into the string \"solution\" until a #\Newline is encountered.
         for trimmed-solution = (string-right-trim '(#\Return #\Newline) solution)
         if (null solution)
           collect "no" into solutions
@@ -204,7 +205,7 @@ send it along to the engine, gather and print the solutions."
 (defun send-query-to-prolog-engine (engine-client query-string prefix-ht relationships)
   "Translate the PSOA RuleML query string \"query-string\" to its
 Prolog equivalent, and send it out to the engine using its input
-stream. Read and collect the solution sets from the engine's output
+stream. Read and collect the answer bindings from the engine's output
 stream."
   (multiple-value-bind (query-string toplevel-var-string)
       (psoa-query->prolog query-string prefix-ht relationships)
@@ -214,8 +215,8 @@ stream."
     (read-and-collect-solutions (prolog-engine-client-output-stream engine-client))))
 
 (defun consult-local-file (filename stream)
-  "Preface filename with the source directory (which means it is a 'local' file)
-and tell the Prolog engine to consult it."
+  "Preface filename with the source directory (which means it is a
+'local' file) and tell the Prolog engine to consult it."
   (write-string "consult('" stream)
   (write-string (namestring
                  (merge-pathnames (asdf:system-source-directory "psoatransrun")
@@ -269,8 +270,8 @@ with user assistance if necessary. Once done, enter -psoa-load-and-repl."
   "Parse the PSOA RuleML \"document\", a string, into a PSOA RuleML document,
 which is transformed and translated as described in the documentation
 of psoa-document->prolog. Then launch the Prolog backend using
-start-prolog-process, initialize the KB using init-prolog-process,
-and launch the REPL.
+start-prolog-process, initialize the KB using init-prolog-process, and
+launch the REPL.
 
 Upon abort or any other unresolvable error, execute quit-prolog-engine
 to close the process."

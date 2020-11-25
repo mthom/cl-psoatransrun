@@ -18,9 +18,9 @@ its counterpart Prolog query, the first return value of translate-query.
 The second return value of translate-query is the list of generated
 variables contained in the ruleml-query. These must be sent to the
 server running atop the Prolog engine that will evaluate the query and
-send back the variable equations defining its solutions. The server
+send back the variable equations defining its answers. The server
 must be told which variables are generated so as to exclude them from
-its reported solutions."
+its reported answers."
   (let* ((*print-pprint-dispatch* (copy-pprint-dispatch nil))
          (query-vars)
          (output-stream (make-string-output-stream)))
