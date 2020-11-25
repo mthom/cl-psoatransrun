@@ -4,6 +4,22 @@
 (named-readtables:in-readtable rutils-readtable)
 
 #|
+#:psoa-transformers defines a sequence of transformations between
+RuleML ASTs. Different combinations of transformers-as-functions are
+applied in anticipation of their output ASTs being translated to KBs
+targeting a given logic engine. The precise combination of
+transformations applied is determined by the logic engine
+target.
+
+For now, cl-psoatransrun exclusively targets Prolog engines. The
+sequence of transformers applied for either of the Prolog engines it
+currently supports (namely, XSB Prolog and Scryer Prolog) are defined
+in the function transform-document for ruleml-document ASTs, and
+transform-query for ruleml-query ASTs.
+|#
+
+
+#|
 Global variables for command-line options.
 |#
 
@@ -66,7 +82,7 @@ parceled into an appropriately parameterized function."
       (make-ruleml-membership :oid oid :predicate predicate :position position)))
 
 (defun subclass-rewrite (term)
-  "The first transformer performed against every PSOA RuleML document/KB rewrites
+  "A transformer performed against top-level Assert items, rewriting
 subclass relations ClassA##ClassB to
 
 Forall ?o (
@@ -76,16 +92,16 @@ Forall ?o (
 where ?o is a ruleml-genvar produced by the fresh-variable function."
   (match term
     ((ruleml-subclass-rel :super super :sub sub)
-     (let* ((var   (fresh-variable))
-            (head  (make-ruleml-oidful var super))
-            (body  (make-ruleml-oidful var sub)))
+     (let* ((var  (fresh-variable))
+            (head (make-ruleml-oidful var super))
+            (body (make-ruleml-oidful var sub)))
        (make-ruleml-forall :vars (list var)
                            :clause (make-ruleml-implies :conclusion head
                                                         :condition  body))))
     ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
-     (let* ((var   (fresh-variable))
-            (head  (make-ruleml-oidful var super))
-            (body  (make-ruleml-oidful var sub)))
+     (let* ((var  (fresh-variable))
+            (head (make-ruleml-oidful var super))
+            (body (make-ruleml-oidful var sub)))
        (make-ruleml-forall :vars (cons var vars)
                            :clause (make-ruleml-implies :conclusion head
                                                         :condition  body))))
@@ -135,9 +151,9 @@ If it is, and it is an oidless atom, it is assigned:
 In either case, \"term\" has its subterms similarly processed by
 -embedded-objectify, before which in-psoa-rest-p is set to t, since its
 subterms are synonymously embedded terms."
-  (let (in-psoa-rest-p ;; Initialize \"in-psoa-rest-p\" and \"embedded-oids\" to NIL.
+  (let (in-psoa-rest-p ;; initialize \"in-psoa-rest-p\" and \"embedded-oids\" to NIL.
         embedded-oids
-        (ground-atom-p (ground-atom-p atom))) ;; Check that atom is ground.
+        (ground-atom-p (ground-atom-p atom))) ;; check that atom is ground.
     (declare (special in-psoa-rest-p)) ;; in-psoa-rest is a dynamically scoped (special) variable.
     (labels ((substep (term &key &allow-other-keys) ;; term is embedded in an atom. Thus ...
                (let ((in-psoa-rest-p t)) ;; ... in-psoa-rest-p is t in all downward calls.
@@ -150,18 +166,18 @@ subterms are synonymously embedded terms."
                       (let ((oid (if (and (not positive) (not negative) ground-atom-p) ;; ... generate an OID.
                                      (fresh-constant)
                                      (let ((var (fresh-variable)))
-                                       ;; Record the fresh variable OID for later use in an Exists wrapper.
+                                       ;; record the fresh variable OID for later use in an Exists wrapper.
                                        (push var embedded-oids)
                                        var))))
-                        (make-ruleml-oidful-atom ;; Attach an OID to the embedded oidless atom term.
+                        (make-ruleml-oidful-atom ;; attach an OID to the embedded oidless atom term.
                          :oid oid
                          :predicate
                          (make-ruleml-atom :root (walker root)
                                            :descriptors (mapcar #`(walker %) descriptors))))
-                      (let ((in-psoa-rest-p t)) ;; Otherwise, term is a top-level (non-embedded) atom.
+                      (let ((in-psoa-rest-p t)) ;; otherwise, term is a top-level (non-embedded) atom.
                         ;; in-psoa-rest is now t, as we are about to recurse downward into term.
                         (declare (special in-psoa-rest-p))
-                        ;; Keep term as a top-level oidless atom, but
+                        ;; keep term as a top-level oidless atom, but
                         ;; objectify any atoms embedded within it.
                         (make-ruleml-atom :root (walker root)
                                           :descriptors (mapcar #`(walker %) descriptors)))))
@@ -180,7 +196,7 @@ subterms are synonymously embedded terms."
                                   (lambda (term &key &allow-other-keys) term)
                                   :propagator #'substep)))
                  (_
-                  ;; Keep term structurally intact, but objectify what
+                  ;; keep term structurally intact, but objectify what
                   ;; are found to be its embedded atoms.
                   (transform-ast
                    term
@@ -189,12 +205,12 @@ subterms are synonymously embedded terms."
 
       (let ((atom (walker atom)))
         (if (null embedded-oids)
-            ;; Initialize the transform by calling the \"walker\" local
+            ;; initialize the transform by calling the \"walker\" local
             ;; function on the argument atom. If no fresh variables are generated,
             ;; just return the transformed atom.
             atom
 
-            ;; Otherwise, wrap the transformed atom in an Exists over the
+            ;; otherwise, wrap the transformed atom in an Exists over the
             ;; list of variable OIDs generated in the course of the
             ;; \"walker\" call.
             (make-ruleml-exists :vars embedded-oids :formula atom))))))
@@ -226,7 +242,7 @@ And(
 )"
   (let (trimmed-terms)
     (labels ((check-oid (oid)
-               ;; Fresh variables replace anonymous variables, and fresh constants
+               ;; fresh variables replace anonymous variables, and fresh constants
                ;; replace "anonymous" constants (i.e., those named "_").
                (match oid
                  ((ruleml-var :name name)
@@ -237,7 +253,7 @@ And(
                  (_ oid)))
              (atoms (term &key &allow-other-keys)
                (match term
-                 ;; Only oidful atoms are submitted for trimming.
+                 ;; only oidful atoms are submitted for trimming.
                  ((or (ruleml-oidful-atom) (ruleml-membership))
                   (push (trim term) trimmed-terms)))
                term)
@@ -263,23 +279,23 @@ And(
              (retain (term)
                (match term
                  ((or (ruleml-oidful-atom :oid oid) (ruleml-membership :oid oid))
-                  ;; Retain the OIDs of oidful atoms occurring as
+                  ;; retain the OIDs of oidful atoms occurring as
                   ;; subterms, but add the similarly trimmed remains
                   ;; to the list trimmed-terms.
                   (retain oid))
                  ((or (ruleml-atom) (ruleml-expr) (ruleml-slot) (ruleml-tuple))
-                  ;; Otherwise, unnest the subterms of \"term\".
+                  ;; otherwise, unnest the subterms of \"term\".
                   (trim term))
                  (_ term))))
 
-      ;; Initiate the unnesting.
+      ;; initiate the unnesting.
       (match term
         ((or (ruleml-oidful-atom) (ruleml-atom) (ruleml-membership) (ruleml-expr))
          (transform-ast term #'atoms)
          (when (ruleml-atom-p term)
            (push (trim term) trimmed-terms))))
 
-      ;; Return the unnested terms as the conjuncts of an And(...) formula
+      ;; return the unnested terms as the conjuncts of an And(...) formula
       ;; if more than one term is in trimmed-terms.
       (cond ((null trimmed-terms) term)
             ((single trimmed-terms) (first trimmed-terms))
@@ -390,23 +406,23 @@ objectification at compile-time, leaving the objectification work to
 objectify-dynamic, which is used to introduce ad hoc OIDs at query
 time. In this way, we avoid needlessly objectifying relational
 predicates."
-  (if (and positive negative) ;; We are objectifying a query atom.
+  (if (and positive negative) ;; we are objectifying a query atom.
       (match term
         ((ruleml-atom :root root :descriptors descriptors)
          (cond ((when-it (gethash root relationships)
                   (and (is-relationship-p term prefix-ht)
                        (member (length (ruleml-tuple-terms (first descriptors)))
                                it)))
-                term) ;; The atom is a relational predicate call. Leave it unobjectified/oidless.
+                term) ;; the atom is a relational predicate call. leave it unobjectified/oidless.
                ((some (lambda (term)
                         (or (ruleml-slot-p term)
                             (not (ruleml-tuple-dep term))))
                       descriptors)
-                (make-ruleml-or)) ;; The atom is not a relational predicate call. Replace it with Or().
+                (make-ruleml-or)) ;; the atom is not a relational predicate call. replace it with Or().
                (t
-                (let ((oid (fresh-variable))) ;; The atom is relational, but doesn't pertain to
-                  (make-ruleml-exists ;; a relational predicate call. Objectify it and
-                   :vars (list oid) ;; wrap it in an Exists ?o (...). Invoke objectify-dynamic
+                (let ((oid (fresh-variable))) ;; the atom is relational, but doesn't pertain to
+                  (make-ruleml-exists ;; a relational predicate call. objectify it and
+                   :vars (list oid) ;; wrap it in an Exists ?o (...). invoke objectify-dynamic
                    :formula (objectify-dynamic ;; on the oidful atom just obtained.
                              (make-ruleml-oidful-atom :oid oid :predicate term)
                              relationships
@@ -421,8 +437,8 @@ predicates."
                             (or (ruleml-slot-p term)
                                 (not (ruleml-tuple-dep term))))
                           descriptors))
-                (make-ruleml-or)) ;; Replace it with Or().
-               (t ;; Unify the variable OID of term to a function term
+                (make-ruleml-or)) ;; replace it with Or().
+               (t ;; unify the variable OID of term to a function term
                 ;; OID Skolem-created by make-oid-cons.
                 (if descriptors
                     (make-ruleml-and
@@ -442,9 +458,9 @@ predicates."
              (multiple-value-bind (tuple-arities foundp) ;; 2.4
                  (gethash (predicate-name predicate prefix-ht) relationships)
                (if foundp
-                   ;; If term is relational, then construct an Or(...)
+                   ;; if term is relational, then construct an Or(...)
                    ;; whose disjuncts are oidful atoms containing a
-                   ;; single dependent tuple.  Each dependent tuple
+                   ;; single dependent tuple. each dependent tuple
                    ;; contains k fresh variables, where k is drawn
                    ;; from the list of unique tuple arities spanned by
                    ;; the definition of predicate in the KB.
@@ -465,7 +481,7 @@ predicates."
                                  :negative negative)))
                             tuple-arities))
                    term))
-             ;; If term is non-relational, replace it with an Or().
+             ;; if term is non-relational, replace it with an Or().
              (make-ruleml-or)))
         (_ term))
 
@@ -515,11 +531,11 @@ the value of the *is-relational-p* special variable."
                   (consider-assert-item clause)))
                item))
 
-      ;; Use transform-ast to find every instance where a predicate may be
+      ;; use transform-ast to find every instance where a predicate may be
       ;; used in a non-relational manner, and when found, blacklist it.
       (transform-ast ruleml-assert #'consider-assert-item)
 
-      ;; Remove the blacklisted predicate names from relationships.
+      ;; remove the blacklisted predicate names from relationships.
       (dolist (root blacklist)
         (remhash root relationships))
 
@@ -574,9 +590,9 @@ transformation is not applied at all."
                     (*static-objectification-only*
                      (multiple-value-bind (term new-vars)
                          (apply #'objectify-static term args)
-                       (appendf vars new-vars) ;; Append new-vars to the Forall clause vars.
+                       (appendf vars new-vars) ;; append new-vars to the Forall clause vars.
                        term))
-                    ((and (ruleml-atom-p term) external) ;; Don't objectify atoms in External(...)'s.
+                    ((and (ruleml-atom-p term) external) ;; don't objectify atoms in External(...)'s.
                      term)
                     (t (if-it (predicate-name term prefix-ht)
                               (multiple-value-bind (tuple-arities foundp)
@@ -678,7 +694,7 @@ Forall clause, if there is one."
                     ;; replace the existential variables in the
                     ;; enclosed existential formula with the generated
                     ;; skolem terms, indexed by the corresponding
-                    ;; variable in the vars hash-table. Once that's
+                    ;; variable in the vars hash-table. once that's
                     ;; done, skolemize the variables of any remaining
                     ;; existentials from the outer call to
                     ;; transform-ast.
@@ -840,11 +856,11 @@ variable names entailed by lexical scoping."
    (lambda (term &key negative &allow-other-keys)
      (match term
        ((ruleml-exists :vars vars :formula formula)
-        (if negative ;; We are in a condition or query.
-            (let ((renamed-evs (make-hash-table :test #'equalp)) ;; Hash table of renamed existential variables assigned to renamed-evs.
+        (if negative ;; we are in a condition or query.
+            (let ((renamed-evs (make-hash-table :test #'equalp)) ;; hash table of renamed existential variables assigned to renamed-evs.
 				  )
               (dolist (var vars)
-                (sethash (ruleml-var-name var) ;; Set the hash at the key (ruleml-var-name var) ...
+                (sethash (ruleml-var-name var) ;; set the hash at the key (ruleml-var-name var) ...
                          renamed-evs ;; ... in the hash table renamed-evs ...
                          (fresh-variable))) ;; ... with the value generated by (fresh-variable).
               (transform-ast
@@ -854,9 +870,9 @@ variable names entailed by lexical scoping."
                      (multiple-value-bind (renamed-var foundp)
                          (gethash (ruleml-var-name term) renamed-evs)
                        (if foundp ;; t iff the variable is named as a key in the hash table.
-						   renamed-var ;; If the variable is found in the Exists formula, set it to its
+						   renamed-var ;; if the variable is found in the Exists formula, set it to its
 						   ;; new name.
-						   term ;; Not an existential variable, so use its original name.
+						   term ;; not an existential variable, so use its original name.
 						   ))
                      term))))
             term))
@@ -877,8 +893,7 @@ variable names entailed by lexical scoping."
 
 
 (defun rename-anonymous-constants (term name-generator)
-  "Rename anonymous constants according to the function
-  \"name-generator\"."
+  "Rename anonymous constants using the function \"name-generator\"."
   (transform-ast term
                  (lambda (term &key &allow-other-keys)
                    (match term
@@ -896,24 +911,25 @@ convention _1, _2, ..., _N, if the names aren't already taken."
      term
      (lambda (term &key &allow-other-keys)
        (match term
-         ;; Local constants are always ruleml-const values with
+         ;; local constants are always ruleml-const values with
          ;; string \"contents\".
          ((guard (ruleml-const :contents contents)
                  (stringp contents))
           (multiple-value-bind (new-constant foundp)
               (gethash contents new-constant-names)
             (if foundp
-                ;; Use the previously generated name if one is found in new-constant-names.
+                ;; use the previously generated name if one is found in new-constant-names.
                 new-constant
-                ;; Generate a new name and index it in new-constant-names.
+                ;; generate a new name and index it in new-constant-names.
                 (sethash contents new-constant-names (funcall new-constant)))))
          (_
           term))))))
 
 (defun fetch-psoa-url (url)
   "Fetch a PSOA KB at the URL and return it as a string."
-  ;; The URL must end in .psoa.
-  (assert (equal (subseq url (- (length url) (length ".psoa"))) ".psoa"))
+  ;; the URL must end in ".psoa".
+  (assert (equal (subseq url (- (length url) (length ".psoa")))
+                 ".psoa"))
   ;; drakma:http-request will return a vector of character codes, so we
   ;; convert it into a string.
   (map 'string #'code-char (drakma:http-request url)))
@@ -951,7 +967,7 @@ the resulting merged document."
     (check-type master-document-assert ruleml-assert)
 
     (dolist (imported-document imported-documents)
-      ;; Rename the local constants of \"imported-document\", and merge
+      ;; rename the local constants of \"imported-document\", and merge
       ;; it Assert items and prefixes into \"master-document\".
       (let ((imported-document (rename-local-constants imported-document excluded-constants)))
         (appendf (ruleml-document-prefixes master-document)
@@ -966,13 +982,13 @@ the resulting merged document."
   "Load the Imports of the ruleml-document \"document\" and rename all
 local constants before merging them all into a single ruleml-document,
 which is returned."
-  ;; Copy the list of imports from \"document\" so that we can
+  ;; copy the list of imports from \"document\" so that we can
   ;; mutate the local copy as a queue. imports is a shallow copy of the
   ;; imports list.
   (let ((imports (copy-list (ruleml-document-imports document)))
         (documents '()))
 
-    ;; The do macro is documented in the Common Lisp Hyperspec here:
+    ;; the do macro is documented in the Common Lisp Hyperspec here:
     ;; http://www.lispworks.com/documentation/HyperSpec/Body/m_do_do.htm
     (do ((import (pop imports) (pop imports)))
         ((null import) (merge-and-rename document (nreverse documents)))
@@ -1024,7 +1040,7 @@ prefix-ht hash tables."
                         (kb-relationships (make-ruleml-assert :items first-stage-items)
                                           prefix-ht)
                       (let ((*is-relational-p* is-relational-p))
-                        ;; Binding the *is-relational-p* special variable for use by
+                        ;; binding the *is-relational-p* special variable for use by
                         ;; objectify and subsequent transformations.
                         (make-ruleml-assert
                          :items (mapcan #`(-> (objectify % relationships prefix-ht)
@@ -1074,7 +1090,7 @@ non-relational KB, which is done in this function."
                                           (ruleml-document-prefix-ht document))
                       (declare (ignore is-relational-p))
                       (let ((*is-relational-p* nil))
-                        ;; Binding the *is-relational-p* special variable for use by
+                        ;; binding the *is-relational-p* special variable for use by
                         ;; objectify and subsequent transformations.
                         (make-ruleml-assert
                          :items (mapcan #`(-> (objectify % relationships
@@ -1099,12 +1115,13 @@ non-relational KB, which is done in this function."
 instance of ruleml-query, according to the sequence of operations
 below, using the Clojure-style (->) threading macro discussed in
 the documentation of transform-document."
-  ;; The transformations which apply to queries are slightly fewer
+  ;; the transformations which apply to queries are slightly fewer
   ;; than those that apply to KB items.
   (-> query
       embedded-objectify
       unnest
       (objectify relationships prefix-ht)
-      (flatten-externals t) ;; We are transforming a query, so the queryp optional argument is t.
+      (flatten-externals t) ;; we are transforming a query, so the
+                            ;; queryp optional argument is t.
       separate-existential-variables
       describute))

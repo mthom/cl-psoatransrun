@@ -9,7 +9,8 @@ AST nodes constructed by the rules are defined in the package
 #:psoa-ast.
 
 The rules themselves are specified in the rule notation of the esrap
-library, a backtracking packrat parser for Common Lisp, documented in:
+library, a backtracking packrat parser generator for Common Lisp,
+documented at:
 
 https://scymtym.github.io/esrap/
 

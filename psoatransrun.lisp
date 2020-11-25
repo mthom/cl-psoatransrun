@@ -130,8 +130,8 @@ is reached, a state signified by \"solutions\" being bound to NIL.
 produced by parsing the string against the esrap rule \"grammar\", an
 optional argument whose default value is 'prolog-grammar::goal-sequence.
 
-The default is appropriate for the cl-psoatransrun REPL, as solution
-sets are returned from the Prolog engine backend as strings of
+The default is appropriate for the cl-psoatransrun REPL, as answer
+bindings are returned from the Prolog engine backend as strings of
 comma-separated Prolog goals. The test suite, however, reads test case
 answer bindings as strings of space-separated PSOA RuleML equations,
 which demands a different grammar to be parsed."
