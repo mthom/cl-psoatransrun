@@ -151,6 +151,20 @@ which demands a different grammar to be parsed."
           collect (parse grammar (trim-solution-string trimmed-solution))
           into solutions))
 
+(defun continue-reading-solutions-p (&optional (stream *standard-input*))
+  "At the REPL, more answers are solicited by the hitting the #\; key;
+if ENTER is hit instead, stop soliciting answers and return to the
+prompt."
+  (loop (match (read-char stream)
+          (#\; (return t))
+          ((or #\Return #\Newline)
+           (terpri)
+           (return nil))
+          (_
+           ;; remove trailing newline terminators from \"stream\"
+           ;; following unrecognized characters.
+           (read-line stream nil)))))
+
 (defun print-solutions (solutions)
   "Print the solutions from the \"solutions\" list, formatted by the
 type of each individual solution. Wait for a keypress before printing
@@ -165,9 +179,9 @@ solution on a separate line."
              ("no"
               (format t "no~%")
               (return)))
-           (if *all-solutions*
-               (terpri)
-               (read-char))))
+           (cond (*all-solutions* (terpri))
+                 ((not (continue-reading-solutions-p))
+                  (return)))))
 
 (defun psoa-repl (engine-client prefix-ht
                   &optional (relationships (make-hash-table :test #'equalp)))
