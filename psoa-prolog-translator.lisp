@@ -1,6 +1,14 @@
 
 (in-package #:psoa-prolog-translator)
 
+#|
+#:psoa-prolog-translator converts ruleml-document and ruleml-query
+ASTs to strings representing their Prolog KB and query
+counterparts. It has the additional responsibility of tailoring those
+KBs and queries to meet the specific requirements of the targeted
+Prolog engine.
+|#
+
 (named-readtables:in-readtable rutils-readtable)
 
 (defun translate-query (query prefix-ht)
@@ -106,7 +114,7 @@ systems."
 
 (defun -translate-document (document)
   "Iterates through the performatives of a ruleml-document object
-and calls the line translator -translate on each item of a Query
+and calls the line translator translate-item on each item of a Query
 or Assert. In the process, it gathers predicate indicator dotted pairs
 for later sorting purposes."
   (let* (;; Since Prolog is the translated target, disable the action
@@ -305,7 +313,7 @@ predicate-indicator cell to be written."
                    ((ruleml-const :contents const)
                     (match const
                       ((ruleml-pname-ln :name ns :url local)
-                       ;; Translate prefixed predicates according
+                       ;; Translate prefixed predicates
                        ;; using the helper functions defined in
                        ;; psoa-ast.lisp.
                        (record-predicate-indicator
