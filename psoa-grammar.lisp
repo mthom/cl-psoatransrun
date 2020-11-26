@@ -679,16 +679,24 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
     (let ((operand (ruleml-string-contents unicode-string)))
       (typecase sym-space
         (ruleml-iri
+         ;; try to perform a cast of the string \"operand\" to the type
+         ;; described by \"sym-space\", a ruleml-iri. if we cannot resolve
+         ;; to a pre-defined cast, create a ruleml-expr named \"sym-space"
+         ;; with \"unicode-string\" as its sole argument.
          (let ((value (prefix-type-cast (ruleml-iri-contents sym-space) operand)))
            (if value
                value
-               (make-ruleml-expr
-                :root sym-space
-                :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string)))
-                :position start))))
+               #1=(make-ruleml-expr
+                   :root sym-space
+                   :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string)))
+                   :position start))))
         (ruleml-pname-ln
          (let ((ns (ruleml-pname-ln-name sym-space))
                (local (ruleml-pname-ln-url sym-space)))
+           ;; again try to perform a cast of the string \"operand\" according
+           ;; to the type described by \"sym-space\", but this time, resolve
+           ;; \"sym-space\" through the hash table dynamically bound to \"*prefix-ht*\".
+           ;; if that fails, again evaluate the form bound to #1#.
            (declare (special *prefix-ht*))
            (multiple-value-bind (url foundp)
                (gethash ns *prefix-ht*)
@@ -697,9 +705,7 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
                         (value (prefix-type-cast cast operand)))
                    (if value
                        value
-                       #1=(make-ruleml-expr
-                           :root sym-space
-                           :terms (list (make-ruleml-tuple :dep t :terms (list unicode-string))))))
+                       #1#))
                  #1#))))))))
 
 (defrule sym-space

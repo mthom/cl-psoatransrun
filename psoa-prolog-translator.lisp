@@ -9,6 +9,7 @@ KBs and queries to meet the specific requirements of the targeted
 Prolog engine.
 |#
 
+
 (named-readtables:in-readtable rutils-readtable)
 
 (defun translate-query (query prefix-ht)

@@ -1,6 +1,36 @@
 
 (in-package #:psoatransrun-tests)
 
+#|
+#:psoatransrun-tests defines a simple mechanism for automatically
+loading PSOA RuleML KBs into the Prolog engine backend by the :system
+keyword argument of the function run-test-suite and running tests
+against it.
+
+Tests are found by walking the subdirectories of the directory
+bound to the global variable *test-suite-directory*. KBs are
+expected to be named according to the convention:
+
+<*test-suite-directory*>/test-directory-name/test-directory-name-KB.psoa
+
+Similarly, query and answer files are expected to be named as:
+
+<*test-suite-directory*>/test-directory-name/test-directory-name-query<N>.psoa
+
+and
+
+<*test-suite-directory*>/test-directory-name/test-directory-name-answer<N>.psoa
+
+where N is an integer counted upward from 1.
+
+A test failure occurs when the query "test-directory-name-query<N>.psoa"
+produces answers differing from those of "test-directory-name-answer<N>.psoa".
+
+Test failures and parsing errors are printed to *standard-output* while
+successful tests pass silently.
+|#
+
+
 (named-readtables:in-readtable rutils-readtable)
 
 (defparameter *test-suite-directory*
