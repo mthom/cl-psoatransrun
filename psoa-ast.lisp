@@ -281,7 +281,10 @@ in conjunction with the \"^^\" operator."
 
 (defun prefix-list->prefix-ht (prefixes)
   "Compile a hash table from the list of ruleml-prefix's \"prefixes\"
-with namespace keys and IRI values."
+with namespace keys and IRI values.
+
+In general, functions named according to the convention A->B compute
+and return values of type B from single inputs of type A."
   (alist->ht (loop for prefix in prefixes
                    collect (cons (ruleml-prefix-name prefix)
                                  (ruleml-prefix-iri-ref prefix)))
