@@ -241,8 +241,10 @@ output stream \"stream\" with the help of make-url-const."
 
 (defun make-url-const (ns local prefix-ht &optional (start 0))
   "Use the \"prefix-ht\" hash table to match the Prefix namespace to
-its URL value. If the hash table doesn't contain the namespace as a
-key, substitute the namespace for the URL."
+its URL value. If the namespace wasn't indexed to a URL in
+\"prefix-ht\", return NIL; if the namespace is indexed to a URL not
+recognized by any of the \"match-builtin-*\" functions, return the
+URL."
   (multiple-value-bind (url foundp)
       (gethash ns prefix-ht)
     (when foundp
