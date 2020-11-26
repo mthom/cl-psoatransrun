@@ -155,7 +155,8 @@
            #:make-ruleml-exists
            #:make-ruleml-external
            #:make-ruleml-membership
-           #:make-ruleml-iri)
+           #:make-ruleml-iri
+           #:ground-atom-p)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-pprint
@@ -163,8 +164,9 @@
   (:export #:pprint-ruleml-document))
 
 (defpackage #:psoa-grammar
-  (:use #:cl #:esrap #:psoa-ast)
-  (:export #:parse))
+  (:use #:cl #:esrap #:psoa-ast #:trivia)
+  (:export #:parse)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-transformers
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)

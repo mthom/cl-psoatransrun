@@ -57,18 +57,6 @@ respect to variables."
   "Generate a fresh constant with prefix \"skolem\"."
   (fresh-constant "skolem"))
 
-(defun ground-atom-p (atom)
-  "Traverse the PSOA RuleML AST atom \"atom\" and detect if it
-contains a leaf of type ruleml-var. If so, it is considered non-ground
-and the search is aborted with a return value of
-NIL (false). Otherwise, the atom contains no variables, and
-ground-atom-p returns t (true)."
-  (transform-ast atom
-                 (lambda (term &key &allow-other-keys)
-                   (when (ruleml-var-p term)
-                     (return-from ground-atom-p nil))))
-  t)
-
 (defun make-ruleml-oidful (oid predicate &optional (position 0))
   "Construct an oidful RuleML atom whose type is determined by whether
 the argument \"predicate\" is an oidless atom. As a rule, PSOA RuleML

@@ -55,7 +55,12 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
            (* (or whitespace comment)))
     (:destructure (ws1 ruleml ws2 lparen ws3 base prefixes imports performatives rparen ws4
                        &bounds start)
-      (declare (ignore ruleml ws1 lparen ws2 rparen ws3 ws4))
+      (declare (ignore ws1 lparen ws2 rparen ws3 ws4))
+
+      ;; Issue deprecation warning for use of Document in place of RuleML.
+      (when (string= ruleml "Document")
+        (warn "\"Document\" is deprecated, use \"RuleML\" instead."))
+
       (make-ruleml-document :base base
                             :prefixes prefixes ;; NIL's were removed from within prefix-list
                             :prefix-ht *prefix-ht*
@@ -141,8 +146,13 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
          #\)
          (* (or whitespace comment)))
   (:destructure (assert ws1 lparen rules rparen ws2 &bounds start)
-                (declare (ignore assert ws1 lparen rparen ws2))
-                (make-ruleml-assert :items (remove nil rules) :position start)))
+    (declare (ignore ws1 lparen rparen ws2))
+
+    ;; Issue deprecation warning for use of Group in place of Assert.
+    (when (string= assert "Group")
+      (warn "\"Group\" is deprecated, use \"Assert\" instead."))
+
+    (make-ruleml-assert :items (remove nil rules) :position start)))
 
 (defrule query
     (and "Query"
@@ -157,10 +167,69 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
                 (declare (ignore query ws1 lparen ws2 ws3 rparen ws4))
                 (make-ruleml-query :term formula :position start)))
 
-(defrule rule
-    (or forall-clause clause))
+(defun check-variable-quantification (original-formula)
+  "Issue warnings for Assert formulas in two cases: if a non-ground
+atom isn't enclosed in a Forall formula, and if the enclosing Forall
+of an atom doesn't quantify a variable inside the atom."
+  (let ((*quantified-vars*)
+        (unquantified-vars))
+    (declare (special *quantified-vars*))
+    (labels ((checker (formula &key &allow-other-keys)
+               ;; checker maintains a list, \"*quantified-vars*\", of
+               ;; quantified variable names while performing a pre-order
+               ;; traversal of the AST node \"formula\".  Upon
+               ;; encountering a variable, checker detects if it is
+               ;; missing from \"*quantified-vars*\". The names of
+               ;; variables missing from \"*quantified-vars*\" are pushed
+               ;; afresh to \"unquantified-vars\".
+               (match formula
+                 ((ruleml-exists :vars exists-vars :formula formula)
+                  (let* ((exists-vars (mapcar #'ruleml-var-name exists-vars))
+                         (*quantified-vars* (append exists-vars *quantified-vars*)))
+                    ;; \"exist-vars\" is prepended onto \"*quantified-vars*\"
+                    ;; until the recursive call of checker returns, at
+                    ;; which point \"*quantified-vars*\", as a dynamic
+                    ;; variable, reverts to its next most recent binding
+                    ;; up the call stack.
+                    (declare (special *quantified-vars*))
+                    (checker formula)))
+                 ((guard (ruleml-var :name name)
+                         (not (ruleml-genvar-p formula)))
+                  ;; Unless \"name\" belongs to \"*quantified-vars\*,
+                  ;; this variable is unquantified. Don't include generated
+                  ;; variables in this analysis.
+                  (unless (member name *quantified-vars* :test #'equal)
+                    (pushnew name unquantified-vars :test #'equal)))
+                 (_ (transform-ast formula
+                                   (lambda (term &key &allow-other-keys) term)
+                                   :propagator #'checker)))))
+      (match original-formula
+        ((ruleml-forall :vars forall-vars :clause formula)
+         ;; Set \"*quantified-vars*\* to the list of universally
+         ;; quantified variables, and use checker to traverse
+         ;; \"original-formula\".
+         (setf *quantified-vars* (mapcar #'ruleml-var-name forall-vars))
+         (checker formula))
+        (_
+         ;; Unless \"original-formula\" is ground, warn that it should
+         ;; be enclosed in a Forall.
+         (unless (ground-atom-p original-formula)
+           (warn "\"Forall\" wrapper is missing from clause: ~%~A"
+                 original-formula))
+         (checker original-formula)))
+      (when unquantified-vars
+        ;; Identify the unquantified variables alongside their containing
+        ;; formula in a warning if any were found.
+        (warn "Variable~p not explicitly quantified: ~{?~A~^, ~} in the clause: ~%~A"
+              (if (rest unquantified-vars) 2 1) ;; This is for plurality printing via ~p.
+              (nreverse unquantified-vars)
+              original-formula)))))
 
-(define-condition )
+(defrule rule
+    (or forall-clause clause)
+  (:lambda (rule)
+    (check-variable-quantification rule)
+    rule))
 
 (defrule forall-clause
     (and "Forall"
@@ -367,14 +436,16 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 
     in both cases, descriptors will be bound to nil / ().
 
-    question: if descriptors is nil in either case, how do we know to wrap root in a
-    ruleml-const struct or a ruleml-atom struct?
+    question: if descriptors is nil in either case, how do we know to
+    wrap root in a ruleml-const struct or a ruleml-atom struct?
 
-    answer: if descriptors, the value parsed by the subexpression (? psoa-rest),
-    returns t, then "p()" was parsed, indicating we should construct a ruleml-atom.
+    answer: if descriptors, the value parsed by the subexpression (?
+    psoa-rest), returns t, then "p()" was parsed, indicating we should
+    construct a ruleml-atom.
     (see the definition of psoa-rest).
 
-    otherwise, descriptors is (), indicating we should construct a ruleml-const.
+    otherwise, descriptors is (), indicating we should construct a
+    ruleml-const.
     |#
     (cond ((null descriptors) root)
           ((eql descriptors t)
