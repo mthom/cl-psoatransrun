@@ -10,7 +10,8 @@
 
 (defpackage #:psoa-ast
   (:use #:cl #:rutils #:trivia)
-  (:export #:prefix-list->prefix-ht
+  (:export #:finding
+           #:prefix-list->prefix-ht
            #:make-url-const
            #:write-url-const
            #:prefix-type-cast
@@ -166,6 +167,9 @@
 (defpackage #:psoa-grammar
   (:use #:cl #:esrap #:psoa-ast #:trivia)
   (:export #:parse)
+  (:import-from #:rutils.hash-set hash-set add# diff# emptyp# inter#)
+  (:import-from #:rutils.kv keys)
+  (:shadowing-import-from :esrap ?)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:psoa-transformers

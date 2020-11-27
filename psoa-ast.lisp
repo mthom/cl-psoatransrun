@@ -166,6 +166,27 @@ between double quotation marks)."
   (contents "" :type string))
 
 
+(define-condition finding (condition)
+  ((report-string :initarg :report-string :reader finding-report))
+  (:report (lambda (finding stream)
+             (format stream "FINDING:~%   ~A~%"
+                     (finding-report finding))))
+  (:documentation "A condition superclass pertaining to the Finding REPL performative,
+one member of the taxonomy of the REPL performatives listed here:
+
+http://wiki.ruleml.org/index.php/PSOATransRun_Development_Agenda#Introducing_REPL_Performatives"))
+
+(defun finding (datum &rest args)
+  "Creates a finding condition from the format string \"datum\" and
+the variadically captured list of arguments \"args\". The formatted
+finding is printed it via its report function to *error-output* and
+the finding condition is signaled."
+  (let ((finding (make-condition 'finding
+                  :report-string (apply #'format nil datum args))))
+    (signal finding)
+    (format *error-output* "~A" finding)))
+`
+
 (defun match-builtin-function (local)
   "Names of builtin functions in PSOA RuleML are matched to their
 ISO Prolog counterparts. Used for obtaining proper predicate names."

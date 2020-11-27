@@ -220,15 +220,83 @@ of an atom doesn't quantify a variable inside the atom."
       (when unquantified-vars
         ;; Identify the unquantified variables alongside their containing
         ;; formula in a warning if any were found.
-        (warn "Variable~p not explicitly quantified: ~{?~A~^, ~} in the clause: ~%~A"
+        (warn "Variable~P not explicitly quantified: ~{?~A~^, ~} in the clause: ~%~A"
               (if (rest unquantified-vars) 2 1) ;; This is for plurality printing via ~p.
               (nreverse unquantified-vars)
               original-formula)))))
+
+(defun check-naf-variables (rule)
+  (let ((head-vars (hash-set #'equal))
+        (non-naf-vars (hash-set #'equal)))
+    (labels ((hs-supersetp (hash-set-1 hash-set-2)
+               (equalp hash-set-2 (inter# hash-set-1 hash-set-2)))
+             (warn-naf-vars-missing-from-preceding-conjunct (naf-vars)
+               (warn "Conclusion variable~P: ~{?~A~^, ~} do~:[es ~; ~]not occur in a conjunct ~
+preceding the Naf, which should be instantiated to prevent floundering:~%~A"
+                     (if (= (hash-table-count naf-vars) 1) 1 2)
+                     (keys naf-vars)
+                     (/= (hash-table-count naf-vars) 1)
+                     rule))
+             (finding-vars-missing-from-preceding-conjunct (naf-vars)
+               (finding "Variable~P: ~{?~A~^, ~} do~:[es ~; ~]not occur in a conjunct ~
+preceding the Naf:~%~A"
+                     (if (= (hash-table-count naf-vars) 1) 1 2)
+                     (keys naf-vars)
+                     (/= (hash-table-count naf-vars) 1)
+                     rule))
+             (finding-naf-contains-anonymous-var ()
+                 (finding "A Naf in the rule: ~%~A~%contains an anonymous variable"
+                          rule))
+             (checker (term &key naf positive negative &allow-other-keys)
+               (match term
+                 ((ruleml-var :name name)
+                  (declare (special *naf-has-anonymous-var*)
+                           (special *naf-vars*))
+                  (cond ((and naf (ruleml-genvar-p term))
+                         (setf *naf-has-anonymous-var* t))
+                        (naf (add# name *naf-vars*))
+                        (positive (add# name head-vars))
+                        (negative (add# name non-naf-vars)))
+                  term)
+                 ((ruleml-naf :formula formula)
+                  (let ((*naf-has-anonymous-var*)
+                        (*naf-vars* (hash-set #'equal)))
+                    (declare (special *naf-has-anonymous-var*)
+                             (special *naf-vars*))
+
+                    (checker formula :naf t :negative negative)
+
+                    (let ((head-naf-vars (inter# head-vars *naf-vars*)))
+                      (unless (hs-supersetp non-naf-vars head-naf-vars)
+                        (setf head-naf-vars (diff# head-naf-vars non-naf-vars))
+                        (warn-naf-vars-missing-from-preceding-conjunct
+                         head-naf-vars))
+
+                      (setf *naf-vars* (diff# *naf-vars* non-naf-vars)
+                            *naf-vars* (diff# *naf-vars* head-vars)))
+
+                    (unless (emptyp# *naf-vars*)
+                      (finding-vars-missing-from-preceding-conjunct
+                       *naf-vars*))
+
+                    (when *naf-has-anonymous-var*
+                      (finding-naf-contains-anonymous-var))
+
+                    term))
+                 (_ (transform-ast term (lambda (term &key &allow-other-keys) term)
+                                   :propagator (lambda (term &key positive negative &allow-other-keys)
+                                                 (checker term :naf naf
+                                                               :positive positive
+                                                               :negative negative))
+                                   :positive positive
+                                   :negative negative)))))
+      (checker rule))))
 
 (defrule rule
     (or forall-clause clause)
   (:lambda (rule)
     (check-variable-quantification rule)
+    (check-naf-variables rule)
     rule))
 
 (defrule forall-clause
@@ -479,7 +547,7 @@ of an atom doesn't quantify a variable inside the atom."
 (define-condition not-in-left-implicit-tuple-normal-form (error)
   ((position :initarg :position)))
 
-(defun check-descriptors (descriptors position)
+(defun check-implicit-tuple-terms (descriptors position)
   "Package any implicit terms as a single dependent tuple, if any
 exist. Raise an error if \"descriptors\" has implicit tuple terms and
 is not in left-implicit-tuple normal form (LITNF). Raise an error if
@@ -550,7 +618,7 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
     If on the other hand psoa-rest was not triggered,
     atom-oidless-short will know by finding descriptors to be NIL.
     |#
-    (let ((descriptors (check-descriptors (remove nil descriptors) (1+ start))))
+    (let ((descriptors (check-implicit-tuple-terms (remove nil descriptors) (1+ start))))
       (if (null descriptors)
           t
           descriptors))))
