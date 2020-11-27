@@ -499,7 +499,7 @@ Therefore, the KB is relational iff blacklist is NIL when kb-relationships
 returns. The second return value of kb-relationships is used to set
 the value of the *is-relational-p* special variable."
   (let ((relationships (make-hash-table :test #'equal))
-        (blacklist) ;; blacklist is initialized to NIL/'().
+        (blacklist) ;; blacklist is initialized to NIL/().
         )
     (labels ((consider-atom (term head-atom)
                (if (is-relationship-p term prefix-ht)

@@ -190,14 +190,14 @@ of an atom doesn't quantify a variable inside the atom."
                     ;; until the recursive call of checker returns, at
                     ;; which point \"*quantified-vars*\", as a dynamic
                     ;; variable, reverts to its next most recent binding
-                    ;; up the call stack.
+                    ;; up the call stack
                     (declare (special *quantified-vars*))
                     (checker formula)))
                  ((guard (ruleml-var :name name)
                          (not (ruleml-genvar-p formula)))
-                  ;; Unless \"name\" belongs to \"*quantified-vars\*,
+                  ;; unless \"name\" belongs to \"*quantified-vars\*,
                   ;; this variable is unquantified. Don't include generated
-                  ;; variables in this analysis.
+                  ;; variables in this analysis
                   (unless (member name *quantified-vars* :test #'equal)
                     (pushnew name unquantified-vars :test #'equal)))
                  (_ (transform-ast formula
@@ -205,39 +205,50 @@ of an atom doesn't quantify a variable inside the atom."
                                    :propagator #'checker)))))
       (match original-formula
         ((ruleml-forall :vars forall-vars :clause formula)
-         ;; Set \"*quantified-vars*\* to the list of universally
+         ;; set \"*quantified-vars*\* to the list of universally
          ;; quantified variables, and use checker to traverse
-         ;; \"original-formula\".
+         ;; \"original-formula\"
          (setf *quantified-vars* (mapcar #'ruleml-var-name forall-vars))
          (checker formula))
         (_
-         ;; Unless \"original-formula\" is ground, warn that it should
-         ;; be enclosed in a Forall.
+         ;; unless \"original-formula\" is ground, warn that it should
+         ;; be enclosed in a Forall
          (unless (ground-atom-p original-formula)
            (warn "\"Forall\" wrapper is missing from clause: ~%~A"
                  original-formula))
          (checker original-formula)))
       (when unquantified-vars
-        ;; Identify the unquantified variables alongside their containing
-        ;; formula in a warning if any were found.
+        ;; identify the unquantified variables alongside their containing
+        ;; formula in a warning if any were found
         (warn "Variable~P not explicitly quantified: ~{?~A~^, ~} in the clause: ~%~A"
-              (if (rest unquantified-vars) 2 1) ;; This is for plurality printing via ~p.
+              (if (rest unquantified-vars) 2 1) ;; this is for plurality printing via ~p
               (nreverse unquantified-vars)
               original-formula)))))
 
 (defun check-naf-variables (rule)
-  (let ((head-vars (hash-set #'equal))
-        (non-naf-vars (hash-set #'equal)))
-    (labels ((hs-supersetp (hash-set-1 hash-set-2)
+  "Signal warnings or findings in response to variables likely not
+being properly instantiated in conclusions before appearing in Naf
+formulas (which must appear in conditions)."
+  (let ((head-vars (hash-set #'equal))     ;; the variables of the head (positive context)
+        (non-naf-vars (hash-set #'equal))) ;; the non-naf variables of the body (negative context)
+    (labels ((hs-superset-p (hash-set-1 hash-set-2)
+               ;; \"hash-set-1\" contains \"hash-set-2\" iff the
+               ;; intersection of the two is equal to \"hash-set-2\"
                (equalp hash-set-2 (inter# hash-set-1 hash-set-2)))
-             (warn-naf-vars-missing-from-preceding-conjunct (naf-vars)
+             (warn-head-naf-vars-missing-from-preceding-conjunct (head-naf-vars)
+               ;; warn if the conclusion variables of \"head-naf-vars\"
+               ;; didn't appear in a conjunct preceding a Naf
+               ;; in which they all appear
                (warn "Conclusion variable~P: ~{?~A~^, ~} do~:[es ~; ~]not occur in a conjunct ~
 preceding the Naf, which should be instantiated to prevent floundering:~%~A"
-                     (if (= (hash-table-count naf-vars) 1) 1 2)
-                     (keys naf-vars)
-                     (/= (hash-table-count naf-vars) 1)
+                     (if (= (hash-table-count head-naf-vars) 1) 1 2)
+                     (keys head-naf-vars)
+                     (/= (hash-table-count head-naf-vars) 1)
                      rule))
              (finding-vars-missing-from-preceding-conjunct (naf-vars)
+               ;; print a finding if the variables of \"naf-vars\"
+               ;; didn't appear in a conjunct preceding a Naf
+               ;; in which they all appear
                (finding "Variable~P: ~{?~A~^, ~} do~:[es ~; ~]not occur in a conjunct ~
 preceding the Naf:~%~A"
                      (if (= (hash-table-count naf-vars) 1) 1 2)
@@ -245,13 +256,26 @@ preceding the Naf:~%~A"
                      (/= (hash-table-count naf-vars) 1)
                      rule))
              (finding-naf-contains-anonymous-var ()
-                 (finding "A Naf in the rule: ~%~A~%contains an anonymous variable"
+               ;; lastly, print a finding if a Naf formula contains an
+               ;; anonymous variable
+               (finding "A Naf in the rule: ~%~A~%contains an anonymous variable"
                           rule))
              (checker (term &key naf positive negative &allow-other-keys)
                (match term
                  ((ruleml-var :name name)
                   (declare (special *naf-has-anonymous-var*)
                            (special *naf-vars*))
+                  ;; record the variable named \"name\" to:
+                  ;;
+                  ;; 1. *naf-vars* if the variable is inside a Naf.
+                  ;; 2. head-vars if the variable is inside a conclusion or fact.
+                  ;; 3. non-naf-vars if the variable is inside a condition
+                  ;;    and outside any Naf.
+                  ;;
+                  ;; Also, generated variables found during the
+                  ;; parsing stage are always anonymous variables, and
+                  ;; we record their presence using the
+                  ;; *naf-has-anonymous-var* special variable.
                   (cond ((and naf (ruleml-genvar-p term))
                          (setf *naf-has-anonymous-var* t))
                         (naf (add# name *naf-vars*))
@@ -264,32 +288,50 @@ preceding the Naf:~%~A"
                     (declare (special *naf-has-anonymous-var*)
                              (special *naf-vars*))
 
+                    ;; If checker is processing a Naf formula, we
+                    ;; instantiate fresh *naf-has-anonymous-var* (a
+                    ;; boolean) and *naf-vars* (a hash set) variables
+                    ;; for access down the call stack.
                     (checker formula :naf t :negative negative)
 
                     (let ((head-naf-vars (inter# head-vars *naf-vars*)))
-                      (unless (hs-supersetp non-naf-vars head-naf-vars)
+                      (unless (hs-superset-p non-naf-vars head-naf-vars)
+                        ;; Unless the head Naf variables form a
+                        ;; superset of the non-Naf variables
+                        ;; (condition-side variables outside of any
+                        ;; Naf formula), warn about the head Naf
+                        ;; variables not instantiated prior to their
+                        ;; appearance in this Naf.
                         (setf head-naf-vars (diff# head-naf-vars non-naf-vars))
-                        (warn-naf-vars-missing-from-preceding-conjunct
+                        (warn-head-naf-vars-missing-from-preceding-conjunct
                          head-naf-vars))
 
+                      ;; Subtract the sets \"non-naf-vars\" and
+                      ;; \"head-vars\" from \"*naf-vars*\".
                       (setf *naf-vars* (diff# *naf-vars* non-naf-vars)
                             *naf-vars* (diff# *naf-vars* head-vars)))
 
+                    ;; If \"*naf-vars*\" is non-empty by this point,
+                    ;; print a finding about its variables being
+                    ;; missing from a conjunct prior to this Naf.
                     (unless (emptyp# *naf-vars*)
                       (finding-vars-missing-from-preceding-conjunct
                        *naf-vars*))
 
+                    ;; Finally, if this Naf was found to contain an
+                    ;; anonymous variable, print a finding about it.
                     (when *naf-has-anonymous-var*
                       (finding-naf-contains-anonymous-var))
 
                     term))
-                 (_ (transform-ast term (lambda (term &key &allow-other-keys) term)
-                                   :propagator (lambda (term &key positive negative &allow-other-keys)
-                                                 (checker term :naf naf
-                                                               :positive positive
-                                                               :negative negative))
-                                   :positive positive
-                                   :negative negative)))))
+                 (_ (transform-ast
+                     term (lambda (term &key &allow-other-keys) term)
+                     :propagator (lambda (term &key positive negative &allow-other-keys)
+                                   (checker term :naf naf
+                                                 :positive positive
+                                                 :negative negative))
+                     :positive positive
+                     :negative negative)))))
       (checker rule))))
 
 (defrule rule
