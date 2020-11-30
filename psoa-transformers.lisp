@@ -39,11 +39,11 @@ utility functions.
 |#
 
 (defun fresh-variable (&optional (prefix "Var"))
-  "Generate a fresh variable from an optional prefix system, using the gensym function,
+  "Generate a fresh variable from an optional \"prefix\", using the gensym function,
 so the result is guaranteed not to clash with previously existing
 variable names. The string contents of the variable are wrapped in a
 ruleml-genvar struct, a subtype of ruleml-var, to indicate that the
-variable was freshly generated and therefore not drawn from the source
+variable was machine generated and therefore not drawn from the source
 KB/query."
   (make-ruleml-genvar :name (format nil "~A" (gensym prefix))))
 
@@ -922,8 +922,7 @@ convention _1, _2, ..., _N, if the names aren't already taken."
 (defun fetch-psoa-url (url)
   "Fetch a PSOA KB at the URL and return it as a string."
   ;; the URL must end in ".psoa".
-  (assert (equal (subseq url (- (length url) (length ".psoa")))
-                 ".psoa"))
+  (assert (ends-with ".psoa" url))
   ;; drakma:http-request will return a vector of character codes, so we
   ;; convert it into a string.
   (map 'string #'code-char (drakma:http-request url)))
@@ -936,6 +935,8 @@ convention _1, _2, ..., _N, if the names aren't already taken."
      term
      (lambda (term &key &allow-other-keys)
        (match term
+         ;; The conditions of this guard pattern are necessary and
+         ;; sufficient to qualify a constant as a local constant.
          ((guard (ruleml-const :contents contents)
                  (stringp contents))
           (sethash contents excluded-constants t)))

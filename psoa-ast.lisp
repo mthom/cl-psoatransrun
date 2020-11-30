@@ -185,7 +185,6 @@ the finding condition is signaled."
                   :report-string (apply #'format nil datum args))))
     (signal finding)
     (format *error-output* "~A" finding)))
-`
 
 (defun match-builtin-function (local)
   "Names of builtin functions in PSOA RuleML are matched to their
