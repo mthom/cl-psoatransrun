@@ -79,18 +79,24 @@ Forall ?o (
 
 where ?o is a ruleml-genvar produced by the fresh-variable function."
   (match term
+    ;; subclass directly in the Assert top-level
     ((ruleml-subclass-rel :super super :sub sub)
-     (let* ((var  (fresh-variable))
-            (head (make-ruleml-oidful var super))
-            (body (make-ruleml-oidful var sub)))
-       (make-ruleml-forall :vars (list var)
+     (let* ((var   (fresh-variable))  ;; generate a fresh variable
+	    ;; var as the oid, super as the predicate of rule head
+	    (head  (make-ruleml-oidful var super))
+	    ;; var as the oid, sub as the predicate of rule body
+	    (body  (make-ruleml-oidful var sub)))
+       ;; generate a Forall-wrapped rule
+       ;; having only the generated variable inside the Forall
+       (make-ruleml-forall :vars (list var)  ;; var as singleton variable declaration list
                            :clause (make-ruleml-implies :conclusion head
                                                         :condition  body))))
+    ;; subclass wrapped in a Forall
     ((ruleml-forall :vars vars :clause (ruleml-subclass-rel :super super :sub sub))
-     (let* ((var  (fresh-variable))
-            (head (make-ruleml-oidful var super))
-            (body (make-ruleml-oidful var sub)))
-       (make-ruleml-forall :vars (cons var vars)
+     (let* ((var   (fresh-variable))
+            (head  (make-ruleml-oidful var super))
+            (body  (make-ruleml-oidful var sub)))
+       (make-ruleml-forall :vars (cons var vars)  ;; var extends variable declaration list of vars
                            :clause (make-ruleml-implies :conclusion head
                                                         :condition  body))))
     (_ term)))
