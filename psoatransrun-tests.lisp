@@ -51,8 +51,8 @@ resulting pathname."
       contents)))
 
 (defun kb-pathname (subdirectory)
-  "The test suite KB name is always derived from the name of its containing subdirectory,
-appending \"-KB.psoa\" to produce a filename."
+  "The test suite KB name is always derived from the name of its containing
+ subdirectory, appending \"-KB.psoa\" to produce a filename."
   (file-pathname subdirectory
                  (format nil "~A-KB.psoa" (directory-name subdirectory))))
 
@@ -92,7 +92,8 @@ set-exclusive-or."
       nil)))
 
 (defun answers-match-p (expected-answers reported-answers)
-  "Two answers set match iff all their corresponding answer sets match."
+  "Two answers set match iff all their corresponding answer sets
+match."
   (not (set-exclusive-or expected-answers reported-answers
                          :test #'equal-answer-set-p)))
 
@@ -102,48 +103,53 @@ set-exclusive-or."
 engine client, get back the answers, and compare them with the answers
 expected by the test case in the corresponding answer file. Print a
 message when a query fails."
-  (let ((*all-solutions* t))
-    (loop for n upfrom 1
-          for query-file-pathname = (query-pathname subdirectory n)
-          for answer-file-pathname = (answer-pathname subdirectory n)
-          if (probe-file query-file-pathname) do
-            (let ((query-string (file-get-contents query-file-pathname))
-                  (answer-batch (file-get-contents answer-file-pathname)))
-              (handler-case
-                  (unless
-                      (answers-match-p
-                       (read-and-collect-solutions
-                        (make-string-input-stream answer-batch)
-                        'psoa-grammar::formula-list)
-                       (send-query-to-prolog-engine
-                        engine-client
-                        query-string
-                        prefix-ht
-                        relationships))
-                    (format t "Query ~D of ~A failed!~%"
-                            n (file-namestring test-kb-filename)))
-                (esrap:esrap-parse-error (condition)
-                  (format t "Parse error at \"~A\" at position ~D~%"
-                          (esrap:esrap-error-text condition)
-                          (esrap:esrap-error-position condition)))))
-          else do
-            (format t "Finished testing ~A~%~%"
-                    (file-namestring test-kb-filename))
-            (throw 'continue nil))))
+  (loop for n upfrom 1
+        for query-file-pathname = (query-pathname subdirectory n)
+        for answer-file-pathname = (answer-pathname subdirectory n)
+        if (probe-file query-file-pathname) ;; count N upward from 1 while there are
+                                            ;; still files named "<test-dir>-queryN.psoa"
+          do (let ((query-string (file-get-contents query-file-pathname))
+                   (answer-batch (file-get-contents answer-file-pathname)))
+               (handler-case
+                   (unless
+                       (answers-match-p
+                        (read-and-collect-solutions              ;; parse the answer string as a
+                         (make-string-input-stream answer-batch) ;; list of PSOA formulas
+                         'psoa-grammar::formula-list)
+                        (send-query-to-prolog-engine             ;; submit the query string for
+                         engine-client                           ;; evaluation by the engine.
+                         query-string
+                         prefix-ht
+                         relationships))
+                     (format t "Query ~D of ~A failed!~%"
+                             n (file-namestring test-kb-filename)))
+                 (esrap:esrap-parse-error (condition)
+                   (format t "Parse error at \"~A\" at position ~D~%"
+                           (esrap:esrap-error-text condition)
+                           (esrap:esrap-error-position condition)))))
+        else do
+          (format t "Finished testing ~A~%~%"
+                  (file-namestring test-kb-filename))
+          ;; continue iterating through
+          ;; further test cases in the
+          ;; run-test-suite loop.
+          (throw 'continue nil)))
 
 (defun run-test-suite (&key (system :xsb))
-  "Create and destroy a fresh instance of the Prolog engine derived
-from the \"system\" keyword for each test case in
-*test-suite-directory*. For now, print parse errors and other error
-types as notifications to the screen, but don't allow them to prevent
-further tests."
+  "Create and destroy a fresh instance of the Prolog engine identified
+by the \"system\" keyword for each test case in *test-suite-directory*.
+
+For now, print parse errors and other error types as notifications to
+the screen, but don't allow them to prevent further tests."
   (let ((subdirectories (list-subdirectories *test-suite-directory*))
         (engine-client (make-engine-client system))
         (psoa-pprint::*print-caret-before-expr* nil))
     (dolist (subdirectory subdirectories)
       (let* ((test-kb-filename (kb-pathname subdirectory)))
-        (when (probe-file test-kb-filename)
-          (format t "Running ~A test suite ...~%" (file-namestring test-kb-filename))
+        (when (probe-file test-kb-filename) ;; probe-file returning t confirms the existence
+                                            ;;  of the file \"test-kb-filename\".
+          (format t "Running ~A test suite ...~%"
+                  (file-namestring test-kb-filename))
           (catch 'continue
             (handler-case
                 (let ((psoa-kb-string (file-get-contents test-kb-filename)))
@@ -151,6 +157,10 @@ further tests."
                                         is-relational-p prefix-ht)
                       (psoa-document->prolog psoa-kb-string :system system)
                     (declare (ignore is-relational-p))
+
+                    ;; start with Prolog engine as a subprocess, load the KB,
+                    ;; and call run-test-case; terminate the prolog engine when
+                    ;; finished with the batch of tests on this KB.
                     (let ((process (start-prolog-process engine-client)))
                       (unwind-protect
                            (progn (init-prolog-process engine-client prolog-kb-string process)

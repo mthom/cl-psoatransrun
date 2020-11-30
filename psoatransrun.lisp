@@ -116,10 +116,8 @@ quotes. This function removes the quotes if found."
 \"string\". The XSB manual does not say whether it is possible to
 prevent the printing of these warnings using, e.g., a command line
 flag."
-  (let ((warning-location (search "++Warning" string))
-        (comment-location (search "% " string)))
-    (or (and (numberp warning-location) (zerop warning-location))
-        (and (numberp comment-location) (zerop comment-location)))))
+  (or (starts-with "++Warning" string)
+      (starts-with "% " string)))
 
 (defun read-and-collect-solutions (stream &optional (grammar 'prolog-grammar::goal-sequence))
   "Read lines of text representing answer bindings from \"stream\" and
@@ -128,7 +126,8 @@ is reached, a state signified by \"solutions\" being bound to NIL.
 
 \"solutions\" may contain lists of ruleml-ast-node subtyped objects
 produced by parsing the string against the esrap rule \"grammar\", an
-optional argument whose default value is 'prolog-grammar::goal-sequence.
+optional argument whose default value is
+'prolog-grammar::goal-sequence.
 
 The default is appropriate for the cl-psoatransrun REPL, as answer
 bindings are returned from the Prolog engine backend as strings of
