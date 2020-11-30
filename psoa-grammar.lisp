@@ -81,7 +81,10 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 (defrule multi-line-comment
     (or (and "<!--" (* (and (! "-->") character)) "-->")
         (and "/*" (* (and (! "*/") character)) "*/"))
-  (:constant nil))
+  (:lambda (comment-list)
+    (when (string= "<!--" (first comment-list))
+      (warn "XML-style comment blocks (delimited by '<!--'/'-->') are ~
+now deprecated and will be removed in a future release."))))
 
 (defrule single-line-comment
     (and #\% (* (and (! #\Newline) character)))
