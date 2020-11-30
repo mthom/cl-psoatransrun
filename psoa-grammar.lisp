@@ -70,12 +70,16 @@ http://wiki.ruleml.org/index.php/PSOA_RuleML#Monolithic_EBNF_for_PSOA_RuleML_Pre
 
 (defrule prefix-list
     (* (or prefix whitespace comment))
+  ;; use the around method to compute the hash table for look-up of prefix declarations as early as possible,
+  ;; needed for const-string (otherwise it would be computed only during transform-document)
   (:around ()
-           (declare (special *prefix-ht*))
-           (let ((prefix-list (esrap:call-transform)))
-             (setf *prefix-ht* (prefix-list->prefix-ht prefix-list))
-             prefix-list))
+    (declare (special *prefix-ht*))
+    (let ((prefixes (esrap:call-transform)))  ;; esrap:call-transform is analogous to CL's call-next-method
+      (setf *prefix-ht* (prefix-list->prefix-ht prefixes))
+      prefixes))
   (:lambda (prefixes)
+    ;; removal of NIL's from list prefixes also meets the requirement of prefix-list->prefix-ht,
+    ;; whose hash table return value is bound to *prefix-ht*
     (remove nil prefixes)))
 
 (defrule multi-line-comment
@@ -378,12 +382,15 @@ preceding the Naf:~%~A"
     (or head-and head-exists atomic))
 
 (defrule naf-formula
+    ;; parse a naf-formula according to the production rule
+    ;; naf-formula ::= 'Naf' '(' formula ')'
     (and "Naf"
          #\(
          (* (or whitespace comment))
          formula
          (* (or whitespace comment))
          #\))
+  ;; create a subtree with root ruleml-naf, containing a single child formula
   (:destructure (naf lbrack ws1 formula ws2 rbrack &bounds start)
     (declare (ignore naf lbrack ws1 ws2 rbrack))
     (make-ruleml-naf :formula formula
@@ -492,11 +499,14 @@ preceding the Naf:~%~A"
     (make-ruleml-equal :left left :right right :position start)))
 
 (defrule subclass
+    ;; Parse a sublass according to the production rule
+    ;; subclass ::= term '##' term "
     (and term
          (* (or whitespace comment))
          "##"
          (* (or whitespace comment))
          term)
+  ;; create a subtree with root ruleml-subclass, containing two child terms
   (:destructure (subclass ws1 subclass-rel ws2 superclass &bounds start)
     (declare (ignore ws1 subclass-rel ws2))
     (make-ruleml-subclass-rel :sub subclass :super superclass :position start)))

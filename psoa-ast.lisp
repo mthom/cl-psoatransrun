@@ -260,14 +260,16 @@ output stream \"stream\" with the help of make-url-const."
       (t (format stream "~A:~A" ns local)))))
 
 (defun make-url-const (ns local prefix-ht &optional (start 0))
-  "Use the \"prefix-ht\" hash table to match the Prefix namespace to
-its URL value. If the namespace wasn't indexed to a URL in
-\"prefix-ht\", return NIL; if the namespace is indexed to a URL not
+  "Use the \"prefix-ht\" hash table to match the Prefix namespace \"ns\" to
+its URL value. If the namespace wasn't keyed to a URL in
+\"prefix-ht\", return NIL; if the namespace is keyed to a URL not
 recognized by any of the \"match-builtin-*\" functions, return the
 URL."
-  (multiple-value-bind (url foundp)
+  (multiple-value-bind (url foundp)  ;; gethash returns two values, the value corresponding to the
+                                     ;; key, and a boolean indicating whether the key was found
       (gethash ns prefix-ht)
-    (when foundp
+    (when foundp   ;; if the key is found, try to match with built-ins,
+                   ;; and then replace \"ns\" and \"local\" with their ISO Prolog equivalent
       (match (ruleml-iri-contents url)
         ("http://www.w3.org/2007/rif-builtin-function#"
          (when-it (match-builtin-function local)
@@ -282,7 +284,7 @@ URL."
          (when-it (match-builtin-xsb local)
            (make-ruleml-const :contents it :position start)))
         (_
-         url)))))
+         url)))))  ;; if the key is not a built-in return it as url
 
 (defun prefix-type-cast (cast operand &optional (start 0))
   "Perform a compile-time type cast using a prefixed qualifier. Used
