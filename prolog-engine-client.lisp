@@ -30,7 +30,7 @@ Default engine paths as global variables. Change these to your local paths!
 server. The server compiles and loads the translated Prolog KB sent to
 it by cl-psoatransrun. It receives query strings it evaluates against
 the translated KB, and sends back answer bindings as strings."
-  (host :scryer :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
+  (host :xsb :type (or (eql :xsb) (eql :scryer))) ;; The name of the host system.
   (path #p"" :type pathname)
   process ;; An object representing the Prolog subprocess.
   input-stream
@@ -67,20 +67,20 @@ if one exists."
 
     (ecase host
       (:xsb
-       (sb-ext:process-wait process)
-       (sb-ext:process-close process))
+       (uiop:wait-process process)
+       (uiop:terminate-process process))
       (:scryer
        (with-slots (process socket)
            process
 
          (socket-close socket)
-         (sb-ext:process-wait process)
-         (sb-ext:process-close process))))))
+         (uiop:wait-process process)
+         (uiop:terminate-process process))))))
 
-(defun sb-process-input-stream (engine-client)
+(defun uiop-process-input-stream (engine-client)
   "Return the input stream of the sb-process instance at the heart of
   \"engine-client\"."
-  (sb-ext:process-input
+  (uiop:process-info-input
    (ecase (prolog-engine-client-host engine-client)
      (:xsb (prolog-engine-client-process engine-client))
      (:scryer (scryer-client-process (prolog-engine-client-process engine-client))))))
@@ -93,25 +93,24 @@ and output streams."
   (write-line "end_of_file." (prolog-engine-client-input-stream engine-client))
   (finish-output (prolog-engine-client-input-stream engine-client))
 
-  (write-line "halt." (sb-process-input-stream engine-client))
-  (finish-output (sb-process-input-stream engine-client))
+  (write-line "halt." (uiop-process-input-stream engine-client))
+  (finish-output (uiop-process-input-stream engine-client))
   (close-prolog-engine-client engine-client))
 
 (defun start-prolog-process (engine-client)
   "Launch the Prolog engine backend as a subprocess using the SBCL
-run-program extension. Its use of an SBCL-specific extension makes it
-non-portable to other Common Lisp implementations."
-  (sb-ext:run-program (prolog-engine-client-path engine-client)
-                      (ecase (prolog-engine-client-host engine-client)
-                        ;; These command line arguments are needed to
-                        ;; prevent junk output from clogging the XSB
-                        ;; output stream, which is used by
-                        ;; cl-psoatransrun to read answer bindings.
-                        (:xsb '("--nobanner" "--quietload" "--noprompt" "--nofeedback"))
-                        (:scryer '()))
-                      :input :stream
-                      :output :stream
-                      :wait nil))
+run-program extension. Its use of uiop:launch-program makes it
+portable to most other Common Lisp implementations."
+  (uiop:launch-program (cons (prolog-engine-client-path engine-client)
+                             (ecase (prolog-engine-client-host engine-client)
+                               ;; These command line arguments are needed to
+                               ;; prevent junk output from clogging the XSB
+                               ;; output stream, which is used by
+                               ;; cl-psoatransrun to read answer bindings.
+                               (:xsb '("--nobanner" "--quietload" "--noprompt" "--nofeedback"))
+                               (:scryer '())))
+                       :input :stream
+                       :output :stream))
 
 (defun connect-to-prolog-engine-socket (process)
   "Connect to a Prolog engine socket under the presumption that the
@@ -119,7 +118,7 @@ server prints its listener port to its standard output stream prior to
 accepting socket connections. This is currently only true of
 scryer_server.pl, as xsb_server.pl does not use sockets."
   (loop (handler-case
-            (let* ((port (parse-integer (read-line (sb-ext:process-output process)))))
+            (let* ((port (parse-integer (read-line (uiop:process-info-output process)))))
               (return (socket-connect "127.0.0.1" port)))
           (parse-error ()))))
 
@@ -132,8 +131,8 @@ object (if one is necessary) available from the process slot of
   (with-slots ((process-slot process) input-stream output-stream)
       engine-client
     (ecase (prolog-engine-client-host engine-client)
-      (:xsb (setf input-stream  (sb-ext:process-input process)
-                  output-stream (sb-ext:process-output process)
+      (:xsb (setf input-stream  (uiop:process-info-input process)
+                  output-stream (uiop:process-info-output process)
                   process-slot  process))
       (:scryer (let ((socket (connect-to-prolog-engine-socket process)))
                  (setf input-stream  (socket-stream socket)

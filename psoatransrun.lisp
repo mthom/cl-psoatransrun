@@ -244,7 +244,7 @@ stream."
 writing \"prolog-kb-string\" to the process input stream. Next, load
 the Prolog server corresponding to the Prolog system, whose execution
 is begun by an :- initialization(...) directive."
-  (let ((process-input-stream (sb-ext:process-input process))
+  (let ((process-input-stream (uiop:process-info-input process))
         (system-servers '((:scryer . "scryer_server.pl")
                           (:xsb . "xsb_server.pl")))
         (local-kb-pathname (merge-pathnames (asdf:system-source-directory "psoatransrun")

@@ -188,7 +188,7 @@
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
 
 (defpackage #:prolog-engine-client
-  (:use #:cl #:usocket)
+  (:use #:cl #:uiop #:usocket)
   (:export #:make-engine-client
            #:prolog-engine-client-path
            #:prolog-engine-client-host
