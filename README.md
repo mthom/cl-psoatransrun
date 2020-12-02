@@ -7,15 +7,16 @@ language.
 
 The software required to build and run cl-psoatransrun are as follows:
 
-* [SBCL](http://sbcl.org) -- cl-psoatransrun is written specifically
-for SBCL and will not run on other Common Lisps!
 * [Quicklisp](https://www.quicklisp.org/beta/)
+* A major Common Lisp implementation ([SBCL](http://sbcl.org),
+[CCL](https://ccl.clozure.com/), etc.) -- one on which Quicklisp will
+run
 * One of [XSB Prolog](http://xsb.sourceforge.net) or [Scryer
   Prolog](http://github.com/mthom/scryer-prolog)
 
-Once SBCL, Quicklisp and either of the two Prologs have been installed
+Once a CL, Quicklisp and either of the two Prologs have been installed
 after following the instructions on their linked sites, these
-Quicklisp commands should be executed at the SBCL REPL to install the
+Quicklisp commands should be executed at the CL REPL to install the
 libraries on which cl-psoatransrun depends:
 
 ```
@@ -25,6 +26,7 @@ libraries on which cl-psoatransrun depends:
 * (ql:quickload "rutils")
 * (ql:quickload "trivia")
 * (ql:quickload "usocket")
+* (ql:quickload "uiop")
 ```
 
 Based on these libraries, cl-psoatransrun can be compiled into the
@@ -39,7 +41,7 @@ of
 [psoatransrun-tests.lisp](http://github.com/mthom/cl-psoatransrun/tree/master/psoatransrun-tests.lisp)
 must be changed to its path.
 
-Next, the ASDF build file "psoatransrun.asd" must be loaded into SBCL
+Next, the ASDF build file "psoatransrun.asd" must be loaded into CL
 as in:
 
 ```
@@ -58,7 +60,7 @@ by entering:
 * (psoatransrun:psoa-load-and-repl "<target KB>")
 ```
 
-at the SBCL REPL. "<target KB>" must be replaced with a well-formed
+at the CL REPL. "<target KB>" must be replaced with a well-formed
 string representing a PSOA RuleML knowledge base with a single Assert,
 as in:
 
@@ -100,8 +102,8 @@ to the screen, and a prompt appears where RuleML queries can be entered, as in:
 `psoatransrun:psoa-load-and-repl` also has a keyword argument
 `:system` specifying a Prolog engine for use as a backend. Its default
 value is `:xsb`, which launches XSB Prolog at the path
-`*default-xsb-prolog-path*` as a subprocess of SBCL; if `:system` is
-set to `:scryer`, Scryer Prolog is loaded from the path
+`*default-xsb-prolog-path*` as a subprocess of CL; if `:system` is set
+to `:scryer`, Scryer Prolog is loaded from the path
 `*default-scryer-prolog-path*`.
 
 Support for Scryer Prolog is currently in its infancy, as Scryer is
