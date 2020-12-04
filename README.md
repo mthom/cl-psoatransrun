@@ -123,3 +123,25 @@ backends. It's expected to work on Linux, macOS, and other UNIX-like
 systems. Scryer does not yet run on Windows, although cl-psoatransrun
 has been tested and confirmed to work with XSB versions 3.6 and 3.8 on
 Windows.
+
+## Command-line Options from PSOATransRun and their cl-psoatransrun counterparts
+
+Command-line options in the original Java-based PSOATransRun have been
+reproduced in cl-psoatransrun as global variables to be set
+interactively from within the Lisp environment. They are listed in the
+table below.
+
+cl-psoatransrun provides a few additional options not considered
+within the purview of the PSOA RuleML language. They are indicated in
+the third column.
+
+| cl-psoatransrun Global Variable | PSOATransRun Command Line Option | Within PSOA RuleML      |
+| ------------------------------- | -------------------------------- | ----------------------- |
+| `*static-objectification-only*` | `-s`,`--staticOnly`              | :heavy_check_mark:      |
+| `*all-solutions*`               | `-a`,`--allAns`                  | :heavy_check_mark:      |
+| `*print-caret-before-expr*`     | N/A                              |                         |
+
+All three variables are described
+[here](https://github.com/mthom/cl-psoatransrun/blob/9e141425b7a25758714164403e072b0df580a3f6/psoatransrun.lisp#L36).
+
+

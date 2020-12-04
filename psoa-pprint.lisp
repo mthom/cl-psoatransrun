@@ -23,8 +23,7 @@ https://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node253.html
 PSOA RuleML atom or expression are currently being printed.")
 
 (defparameter *print-caret-before-expr* nil
-  "A boolean indicating whether exprs outside atoms should be
-preceded by caret (^).")
+  "If t, print exprs outside atoms with a preceding caret (^).")
 
 (defun pprint-ruleml-document (stream document)
   (pprint-logical-block (stream nil :prefix "RuleML(" :suffix ")")

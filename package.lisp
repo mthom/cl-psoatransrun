@@ -162,7 +162,8 @@
 
 (defpackage #:psoa-pprint
   (:use #:cl #:psoa-ast #:rutils)
-  (:export #:pprint-ruleml-document))
+  (:export #:pprint-ruleml-document
+           #:*print-caret-before-expr*))
 
 (defpackage #:psoa-grammar
   (:use #:cl #:esrap #:psoa-ast #:trivia)
