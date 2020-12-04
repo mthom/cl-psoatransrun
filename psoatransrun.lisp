@@ -34,7 +34,21 @@ which it enumerates answer bindings.
 
 
 #|
-Global variables for command-line options.
+Global variables for boolean-valued options across cl-psoatransrun:
+
+*all-solutions* (defined below):
+
+  If NIL, wait for a keypress before printing more solutions from the
+logic engine backend.
+
+*static-objectification-only* (defined in psoa-transformers.lisp) :
+
+  If t, use static undifferentiated objectification during the
+objectify transformation.
+
+*print-caret-before-expr* (defined in psoa-pprint.lisp) :
+
+  If t, print exprs outside atoms with a preceding caret (^).
 |#
 
 (defparameter *all-solutions* nil
