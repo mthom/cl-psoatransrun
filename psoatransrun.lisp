@@ -34,12 +34,18 @@ which it enumerates answer bindings.
 
 
 #|
-Global variables for boolean-valued options across cl-psoatransrun:
+Global variables for generalized boolean-valued options across
+cl-psoatransrun:
 
 *all-solutions* (defined below):
 
   If NIL, wait for a keypress before printing more solutions from the
 logic engine backend.
+
+*save-translated-kb* (defined below):
+
+  Unless NIL, save the translated Prolog KB to the pathname stored in
+this variable.
 
 *static-objectification-only* (defined in psoa-transformers.lisp) :
 
@@ -54,6 +60,10 @@ objectify transformation.
 (defparameter *all-solutions* nil
   "If NIL, wait for a keypress before printing more solutions from the
 logic engine backend.")
+
+(defparameter *save-translated-kb* nil
+  "Unless NIL, save the translated Prolog KB to the pathname stored in
+this variable.")
 
 
 #|
@@ -252,6 +262,14 @@ stream."
   (write-line   "')." stream)
   (finish-output stream))
 
+(defun write-translated-kb-to-file (prolog-kb-string local-kb-pathname)
+  "Write the translated Prolog KB \"prolog-kb-string\" to the file identified
+by \"local-kb-pathname\"."
+  (with-open-file (file-stream (namestring local-kb-pathname)
+		   :direction :output :if-exists :supersede)
+    (write-line prolog-kb-string file-stream)
+    (finish-output file-stream)))
+
 (defun init-prolog-process (engine-client prolog-kb-string process
                             &aux (system (prolog-engine-client-host engine-client)))
   "Load the translated Prolog KB into the Prolog engine backend by
@@ -264,11 +282,7 @@ is begun by an :- initialization(...) directive."
         (local-kb-pathname (merge-pathnames (asdf:system-source-directory "psoatransrun")
                                             #p"local-KB.pl")))
 
-    ;; Write the translated Prolog KB to a local file.
-    (with-open-file (file-stream (namestring local-kb-pathname)
-                     :direction :output :if-exists :supersede)
-      (write-line prolog-kb-string file-stream)
-      (finish-output file-stream))
+    (write-translated-kb-to-file prolog-kb-string local-kb-pathname)
 
     ;; Compile the PSOA document in the engine.
     (consult-local-file "local-KB.pl" process-input-stream)
@@ -313,6 +327,9 @@ to close the process."
 
               (format t "The translated KB:~%~%~A" prolog-kb-string)
               (init-prolog-process engine-client prolog-kb-string process)
+
+	      (when *save-translated-kb*
+		(write-translated-kb-to-file prolog-kb-string *save-translated-kb*))
 
               (unwind-protect
                    ;; If a call beneath psoa-repl invokes the
