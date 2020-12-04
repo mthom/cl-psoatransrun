@@ -141,11 +141,10 @@ cl-psoatransrun counterpart are marked N/A in the first column.
 | ------------------------------- | -------------------------------- |
 | `*static-objectification-only*` | `-s`,`--staticOnly`              |
 | `*all-solutions*`               | `-a`,`--allAns`                  |
+| `*save-translated-kb*`          | `-o`,`--outputTrans`             | 
 | `*print-caret-before-expr*`     | N/A                              |
 | N/A                             | `-u`, `--undiff`                 |
 | N/A                             | `-z`, `--omitNegMem`             |
 
-All three variables are described
-[here](https://github.com/mthom/cl-psoatransrun/blob/9e141425b7a25758714164403e072b0df580a3f6/psoatransrun.lisp#L36).
-
-
+All cl-psoatransrun variables are described
+[here](https://github.com/mthom/cl-psoatransrun/blob/e4097b0dbbabe42734c416a1fdba2ef91c0b8d17/psoatransrun.lisp#L36).
