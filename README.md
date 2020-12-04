@@ -126,20 +126,24 @@ Windows.
 
 ## Command-line Options from PSOATransRun and their cl-psoatransrun counterparts
 
-Command-line options in the original Java-based PSOATransRun have been
-reproduced in cl-psoatransrun as global variables to be set
+Command-line options in the [Java-based
+PSOATransRun](https://github.com/RuleML/PSOATransRunComponents/) have
+been reproduced in cl-psoatransrun as global variables to be set
 interactively from within the Lisp environment. They are listed in the
 table below.
 
 cl-psoatransrun provides a few additional options not considered
-within the purview of the PSOA RuleML language. They are marked as
-N/A in the second column.
+within the domain of the PSOA RuleML language. They are marked as N/A
+in the second column. Conversely, PSOATransRun options without a
+cl-psoatransrun counterpart are marked N/A in the first column.
 
 | cl-psoatransrun Global Variable | PSOATransRun Command Line Option |
 | ------------------------------- | -------------------------------- |
 | `*static-objectification-only*` | `-s`,`--staticOnly`              |
 | `*all-solutions*`               | `-a`,`--allAns`                  |
 | `*print-caret-before-expr*`     | N/A                              |
+| N/A                             | `-u`, `--undiff`                 |
+| N/A                             | `-z`, `--omitNegMem`             |
 
 All three variables are described
 [here](https://github.com/mthom/cl-psoatransrun/blob/9e141425b7a25758714164403e072b0df580a3f6/psoatransrun.lisp#L36).
