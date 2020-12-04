@@ -132,14 +132,14 @@ interactively from within the Lisp environment. They are listed in the
 table below.
 
 cl-psoatransrun provides a few additional options not considered
-within the purview of the PSOA RuleML language. They are indicated in
-the third column.
+within the purview of the PSOA RuleML language. They are marked as
+N/A in the second column.
 
-| cl-psoatransrun Global Variable | PSOATransRun Command Line Option | Within PSOA RuleML      |
-| ------------------------------- | -------------------------------- | ----------------------- |
-| `*static-objectification-only*` | `-s`,`--staticOnly`              | :heavy_check_mark:      |
-| `*all-solutions*`               | `-a`,`--allAns`                  | :heavy_check_mark:      |
-| `*print-caret-before-expr*`     | N/A                              |                         |
+| cl-psoatransrun Global Variable | PSOATransRun Command Line Option |
+| ------------------------------- | -------------------------------- |
+| `*static-objectification-only*` | `-s`,`--staticOnly`              |
+| `*all-solutions*`               | `-a`,`--allAns`                  |
+| `*print-caret-before-expr*`     | N/A                              |
 
 All three variables are described
 [here](https://github.com/mthom/cl-psoatransrun/blob/9e141425b7a25758714164403e072b0df580a3f6/psoatransrun.lisp#L36).
