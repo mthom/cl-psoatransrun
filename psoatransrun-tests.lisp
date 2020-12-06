@@ -133,7 +133,7 @@ message when a query fails."
           ;; continue iterating through
           ;; further test cases in the
           ;; run-test-suite loop.
-          (throw 'continue nil)))
+          (return)))
 
 (defun run-test-suite (&key (system :xsb))
   "Create and destroy a fresh instance of the Prolog engine identified
@@ -150,25 +150,24 @@ the screen, but don't allow them to prevent further tests."
                                             ;;  of the file \"test-kb-filename\".
           (format t "Running ~A test suite ...~%"
                   (file-namestring test-kb-filename))
-          (catch 'continue
-            (handler-case
-                (let ((psoa-kb-string (file-get-contents test-kb-filename)))
-                  (multiple-value-bind (prolog-kb-string relationships
-                                        is-relational-p prefix-ht)
-                      (psoa-document->prolog psoa-kb-string :system system)
-                    (declare (ignore is-relational-p))
+          (handler-case
+              (let ((psoa-kb-string (file-get-contents test-kb-filename)))
+                (multiple-value-bind (prolog-kb-string relationships
+                                      is-relational-p prefix-ht)
+                    (psoa-document->prolog psoa-kb-string :system system)
+                  (declare (ignore is-relational-p))
 
-                    ;; start with Prolog engine as a subprocess, load the KB,
-                    ;; and call run-test-case; terminate the prolog engine when
-                    ;; finished with the batch of tests on this KB.
-                    (let ((process (start-prolog-process engine-client)))
-                      (unwind-protect
-                           (progn (init-prolog-process engine-client prolog-kb-string process)
-                                  (run-test-case test-kb-filename subdirectory engine-client
-                                                 prefix-ht relationships))
-                        (terminate-prolog-engine engine-client)))))
-              (esrap:esrap-parse-error ()
-                (format t "Parse error in KB file ~A~%~%"
-                        (file-namestring test-kb-filename)))
-              (error (condition)
-                (format t "An error was received: ~A~%~%" condition)))))))))
+                  ;; start with Prolog engine as a subprocess, load the KB,
+                  ;; and call run-test-case; terminate the prolog engine when
+                  ;; finished with the batch of tests on this KB.
+                  (let ((process (start-prolog-process engine-client)))
+                    (unwind-protect
+                         (progn (init-prolog-process engine-client prolog-kb-string process)
+                                (run-test-case test-kb-filename subdirectory engine-client
+                                               prefix-ht relationships))
+                      (terminate-prolog-engine engine-client)))))
+            (esrap:esrap-parse-error ()
+              (format t "Parse error in KB file ~A~%~%"
+                      (file-namestring test-kb-filename)))
+            (error (condition)
+              (format t "An error was received: ~A~%~%" condition))))))))
