@@ -17,6 +17,7 @@
            #:prefix-type-cast
            #:transform-ast
            #:ruleml
+           #:ruleml-ast-node
            #:ruleml-document
            #:ruleml-document-base
            #:ruleml-document-prefixes
@@ -223,3 +224,14 @@
 
 (defpackage #:prolog-grammar
   (:use #:cl #:esrap #:psoa-ast))
+
+(defpackage #:psoa-ast-graph
+  (:use #:cl #:cl-dot #:psoa-ast #:rutils #:trivia)
+  (:export #:generate-psoa-ast-graph-from-atom)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
+
+(defpackage #:psoa-ast-graph-stepwise-visualizer
+  (:use #:cl #:cl-dot #:psoa-ast #:psoa-ast-graph #:rutils #:trivia)
+  (:export #:stepwise-transform-ast-application
+           #:visualize-transform-ast-application)
+  (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
