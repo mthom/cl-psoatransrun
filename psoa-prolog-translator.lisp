@@ -154,7 +154,7 @@ for later sorting purposes."
 (defun translate-item (item prefix-ht stream &optional (assert-item-p t))
   "Translate a single KB item (either an Assert item or Query formula)
 to its Prolog transformation and write the result to the output stream
-\"stream\". If assert-item-p is true, predicate-indicator information
+\"stream\". If \"assert-item-p\" is true, predicate-indicator information
 should be recorded to the local variable of that name.
 
 The translations of the atom templates matched in the translate local

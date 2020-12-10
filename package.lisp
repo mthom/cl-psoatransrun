@@ -193,7 +193,6 @@
   (:export #:make-engine-client
            #:prolog-engine-client-path
            #:prolog-engine-client-host
-           #:prolog-engine-client-process
            #:prolog-engine-client-input-stream
            #:prolog-engine-client-output-stream
            #:prolog-engine-output-stream
