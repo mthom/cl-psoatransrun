@@ -80,8 +80,8 @@ from #:psoa-transformers, and then by applying translate-document from
 
 The remaining return values are the relationships hash table detailed
 in the #:psoa-transformers documentation, a boolean indicating whether
-the KB is relational, a hash table linking prefix namespaces to URLs,
-and the original, untransformed ruleml-document AST."
+the KB is relational, and a hash table linking prefix namespaces to
+URLs."
   (check-type document string) ;; document is a string.
   (let* ((original-document (parse 'psoa-grammar::ruleml document))
          (document (transform-document original-document)))
@@ -92,38 +92,14 @@ and the original, untransformed ruleml-document AST."
       (values prolog-kb-string
               relationships
               is-relational-p
-              (ruleml-document-prefix-ht document)
-              original-document))))
+              (ruleml-document-prefix-ht document)))))
 
 (defun psoa-query->prolog (query-string prefix-ht relationships)
   "Translate a ruleml-query value \"query\" to a Prolog query string,
 similarly to the execution path of psoa-document->prolog."
-  (flet ((recompile-for-relational-query (query-ast)
-           ;; If the KB is relational but query is not, we should try
-           ;; to recompile the KB non-relationally, but only if the
-           ;; caller of psoa-query->prolog has set up an appropriate
-           ;; context in which it can perform the re-compilation for
-           ;; us.
-           ;;
-           ;; That is what the form (find-restart
-           ;; 'recompile-non-relationally) detects. If no such context
-           ;; exists, it evaluates to NIL and execution of
-           ;; psoa-query->prolog continues as it normally
-           ;; would. Otherwise, control is transferred to the nearest
-           ;; restart named recompile-non-relationally, passing
-           ;; query-string as its sole argument. Depending on the
-           ;; establishment of the restart in the caller (via, i.e.,
-           ;; restart-bind or restart-case), the call stack may be
-           ;; unwound.
-           (when (and *is-relational-p* (not (is-relational-query-p query-ast prefix-ht)))
-             (let ((recompile-restart (find-restart 'recompile-non-relationally)))
-               (when recompile-restart
-                 (invoke-restart recompile-restart query-string))))
-           query-ast))
-    (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query-string))
-        recompile-for-relational-query
-        (transform-query relationships prefix-ht)
-        (translate-query prefix-ht))))
+  (-> (parse 'psoa-grammar::query (format nil "Query(~A)" query-string))
+      (transform-query relationships prefix-ht)
+      (translate-query prefix-ht)))
 
 (defun trim-solution-string (solution-string)
   "Some logic engine backends format strings with enclosing
@@ -317,47 +293,23 @@ launch the REPL.
 Upon abort or any other unresolvable error, execute quit-prolog-engine
 to close the process."
   (multiple-value-bind (prolog-kb-string relationships
-                        is-relational-p prefix-ht document)
+                        is-relational-p prefix-ht)
       (psoa-document->prolog document :system (prolog-engine-client-host engine-client))
 
     (loop
-      (let ((*is-relational-p* is-relational-p))
-        (restart-case
-            (let* ((process (start-prolog-process engine-client)))
+      (let ((*is-relational-p* is-relational-p)
+            (process (start-prolog-process engine-client)))
 
-              (format t "The translated KB:~%~%~A" prolog-kb-string)
-              (init-prolog-process engine-client prolog-kb-string process)
+        (format t "The translated KB:~%~%~A" prolog-kb-string)
+	    (init-prolog-process engine-client prolog-kb-string process)
 
-	      (when *save-translated-kb*
-		(write-translated-kb-to-file prolog-kb-string *save-translated-kb*))
+	    (when *save-translated-kb*
+	      (write-translated-kb-to-file prolog-kb-string *save-translated-kb*))
 
-              (unwind-protect
-                   ;; If a call beneath psoa-repl invokes the
-                   ;; recompile-non-relationally restart, the stack is
-                   ;; unwound, resulting in this unwind-protect
-                   ;; evaluating the (terminate-prolog-engine ...)
-                   ;; form before passing control to the restart.
-                   (psoa-repl engine-client prefix-ht relationships)
-                (terminate-prolog-engine engine-client)))
-
-          (recompile-non-relationally (instigating-query-string)
-            ;; A non-relational query (here, instigating-query-string)
-            ;; can prompt a re-compilation of a relational KB as a
-            ;; non-relational KB. That task is performed here, using
-            ;; the recompile-document-non-relationally function of
-            ;; #:psoa-transformers.
-            (multiple-value-setq (prolog-kb-string relationships is-relational-p)
-              (translate-document (recompile-document-non-relationally document)
-                                  :system (prolog-engine-client-host engine-client)))
-
-            ;; *is-relational-p* must be bound to NIL when we are done here.
-            ;; Raise an error if this is not so.
-            (assert (not is-relational-p))
-
-            ;; schedule the instigating query for execution
-            ;; immediately after re-compilation by prepending it to
-            ;; the *standard-input* stream.
-            (setf *standard-input*
-                  (make-concatenated-stream
-                   (make-string-input-stream (format nil "~A~%" instigating-query-string))
-                   *standard-input*))))))))
+	    (unwind-protect
+	         ;; If a call beneath psoa-repl throws an error, the stack
+	         ;; is unwound, resulting in this unwind-protect
+	         ;; evaluating the (terminate-prolog-engine ...) form
+	         ;; before passing control to the restart.
+	         (psoa-repl engine-client prefix-ht relationships)
+	      (terminate-prolog-engine engine-client))))))
