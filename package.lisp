@@ -178,7 +178,6 @@
   (:export #:*static-objectification-only*
            #:*is-relational-p*
            #:is-relational-query-p
-           #:recompile-document-non-relationally
            #:transform-document
            #:transform-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))

@@ -225,6 +225,7 @@ stream."
     (write-line query-string (prolog-engine-client-input-stream engine-client))
     (write-line toplevel-var-string (prolog-engine-client-input-stream engine-client))
     (force-output (prolog-engine-client-input-stream engine-client))
+
     (read-and-collect-solutions (prolog-engine-client-output-stream engine-client))))
 
 (defun consult-local-file (filename stream)

@@ -296,7 +296,7 @@ And(
             (t (make-ruleml-and :terms (nreverse trimmed-terms)))))))
 
 
-(defun objectify-static (term &key positive negative &allow-other-keys)
+(defun objectify-static (term &key positive negative external &allow-other-keys)
   "Perform the first kind of top-level objectification, static
 differentiated objectification, \"static\" because it occurs at
 compile-time, and \"differentiated\" because the kind of OID generated
@@ -323,7 +323,8 @@ the preceding embedded-objectify transformation."
   (let (vars)
     (values
      (match term
-       ((or (ruleml-atom) (ruleml-const))
+       ((guard (or (ruleml-atom) (ruleml-const))
+               (not external))
         (let ((ground-atom-p (ground-atom-p term)))
           (cond ((and ground-atom-p (not positive) (not negative)) ; 1
                  (make-ruleml-oidful (fresh-constant)
@@ -1053,56 +1054,6 @@ prefix-ht hash tables."
                  (_ term)))
              (ruleml-document-performatives document)))))
 
-
-(defun recompile-document-non-relationally (document)
-  "\"document\" represents an untransformed ruleml-document, parsed
-from a previous string KB. It was compiled then as a purely relational
-KB, but a non-relational query has prompted its re-compilation as a
-non-relational KB, which is done in this function."
-  (let* ((document (load-imports-and-merge document))
-         (local-constants (index-local-constants document))
-         (anonymous-constant-renamer (constant-name-generator local-constants)))
-    (make-ruleml-document
-     :base (ruleml-document-base document)
-     :prefixes (ruleml-document-prefixes document)
-     :prefix-ht (ruleml-document-prefix-ht document)
-     :imports (ruleml-document-imports document)
-     :performatives
-     (mapcar (lambda (term)
-               (match term
-                 ((ruleml-assert :items items)
-                  (let ((first-stage-items (mapcar #`(-> (rename-anonymous-constants
-                                                          %
-                                                          anonymous-constant-renamer)
-                                                         subclass-rewrite
-                                                         embedded-objectify
-                                                         unnest)
-                                                   items)))
-                    ;; new relationships are compiled once more,
-                    ;; but *is-relational-p* is now NIL.
-                    (multiple-value-bind (relationships is-relational-p)
-                        (kb-relationships (make-ruleml-assert :items first-stage-items)
-                                          (ruleml-document-prefix-ht document))
-                      (declare (ignore is-relational-p))
-                      (let ((*is-relational-p* nil))
-                        ;; binding the *is-relational-p* special variable for use by
-                        ;; objectify and subsequent transformations.
-                        (make-ruleml-assert
-                         :items (mapcan #`(-> (objectify % relationships
-                                                         (ruleml-document-prefix-ht document))
-                                              skolemize
-                                              flatten-externals
-                                              separate-existential-variables
-                                              describute
-                                              split-conjuctive-conclusion)
-                                        first-stage-items)
-                         :relationships relationships
-                         :is-relational-p nil)))))
-                 ((ruleml-query)
-                  (let ((relationships (make-hash-table :test #'equal)))
-                    (transform-query term relationships (ruleml-document-prefix-ht document))))
-                 (_ term)))
-             (ruleml-document-performatives document)))))
 
 
 (defun transform-query (query relationships prefix-ht)
