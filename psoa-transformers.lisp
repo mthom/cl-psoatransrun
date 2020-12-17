@@ -385,15 +385,6 @@ OIDs, making it non-relational."
          (return-from is-relationship-p nil))
   t)
 
-(defun is-relational-query-p (query prefix-ht)
-  "t iff query contains non-relational atoms."
-  (map-atom-transformer (lambda (term &key &allow-other-keys)
-                          (if (is-relationship-p term prefix-ht)
-                              term
-                              (return-from is-relational-query-p nil)))
-                        query)
-  t)
-
 (defun objectify-dynamic (term relationships prefix-ht &key positive negative &allow-other-keys)
   "In the default static/dynamic objectification transformation,
 top-level KB and query atoms are sometimes deferred from
@@ -716,37 +707,37 @@ Forall clause, if there is one."
 
 (defun -flatten-externals (term)
   (let ((eqs)
-        (external-exprs-ht (make-hash-table :test #'equalp)))
-    (labels ((trim (term)
-               (transform-ast term #'retain))
+        (gen-vars))
+    (labels ((trim (term &key external &allow-other-keys)
+               (match term
+                 ((guard (or (ruleml-oidful-atom) (ruleml-atom)
+                             (ruleml-expr) (ruleml-subclass-rel)
+                             (ruleml-equal) (ruleml-external))
+                         (not external))
+                  (let ((term (transform-ast term #'retain)))
+                    (prog1 (if eqs
+                               (make-ruleml-and :terms (nreverse (cons term eqs)))
+                               term)
+                      (setf eqs nil))))
+                 (_ (transform-ast term (lambda (term &key &allow-other-keys) term)
+                                   :propagator #'trim
+                                   :external external))))
              (retain (term &key external &allow-other-keys)
                (match term
-                 ((ruleml-external :atom atom)
-                  (cond (external atom)
-                        ((ruleml-genvar-p atom) atom)
-                        (t term)))
-                 ((guard (ruleml-expr) external) ;; term is an expression inside an External.
-                  (multiple-value-bind (expr-var foundp)
-                      (gethash term external-exprs-ht)
-                    (if foundp   ;; term was mapped to a generated variable previously ...
-                        expr-var ;; ... so return the previously generated variable.
-                        ;; otherwise, create a fresh variable, expr-var.
-                        (let ((expr-var (fresh-variable)))
-                          (push (make-ruleml-equal ;; push an equality between expr-var and
-                                 :left expr-var    ;; the expression to the eqs list.
-                                 :right (make-ruleml-external :atom term))
-                                eqs)
-                          (sethash term external-exprs-ht expr-var) ;; .. and index expr-var from term.
-                          expr-var))))
+                 ((guard (ruleml-external :atom (ruleml-expr))
+                         external)
+                  ;; term is an expression inside an External.
+                  (let ((expr-var (fresh-variable)))
+                    (push (make-ruleml-equal ;; push an equality between expr-var and
+                           :left expr-var ;; the expression to the eqs list.
+                           :right term)
+                          eqs)
+                    (push expr-var gen-vars)
+                    expr-var))
                  (_ term))))
-      (let ((flattened-term (trim term)))
-        (values (if eqs
-                    (make-ruleml-and :terms (nreverse (cons flattened-term eqs)))
-                    flattened-term)
-                (loop for var being the hash-values of external-exprs-ht
-                      collect var))))))
+      (values (trim term) gen-vars))))
 
-(defun flatten-externals (term &optional queryp)
+(defun flatten-externals (term)
   "External(...) formulas contain expressions meant to be evaluated
 using the call-by-value evaluation strategy.
 
@@ -763,26 +754,33 @@ or fact of the KB.
 The action of flatten-externals and its helper -flatten-externals are
 defined according to section 5.7 of Gen Zou's thesis."
   (let* ((vars)
-         (term (transform-ast
-                term
-                (lambda (term &key external &allow-other-keys)
-                  (match term
-                    ((guard (or (ruleml-expr) (ruleml-oidful-atom) (ruleml-atom)
-                                (ruleml-subclass-rel) (ruleml-equal))
-                            (not external))
-                     (multiple-value-bind (term new-vars)
-                         (-flatten-externals term)
-                       (if queryp
-                           (make-ruleml-exists :vars new-vars :formula term)
-                           (progn (appendf vars new-vars)
-                                  term))))
-                    (_ term))))))
-    (match term
-      ((ruleml-forall :vars forall-vars :clause clause)
-       (make-ruleml-forall :vars (append forall-vars vars) :clause clause))
-      (_ (if vars
-             (make-ruleml-forall :vars vars :clause term)
-             term)))))
+         (queryp (ruleml-query-p term)))
+    (labels ((flattener (term)
+               (match term
+                 ((ruleml-implies :conclusion conclusion :condition condition)
+                  (make-ruleml-implies :conclusion conclusion
+                                       :condition (flattener condition)))
+                 (_ (multiple-value-bind (flattened-term new-vars)
+                        (-flatten-externals term)
+                      (let ((term (typecase flattened-term
+                                    (list (make-ruleml-and :terms flattened-term))
+                                    (t flattened-term))))
+                        (cond ((and queryp new-vars)
+                               (make-ruleml-exists :vars new-vars :formula term))
+                              (new-vars (appendf vars new-vars)
+                                        term)
+                              (t term))))))))
+      (match term
+        ((ruleml-forall :vars forall-vars :clause clause)
+         (let ((clause (flattener clause)))
+           (make-ruleml-forall :vars (append forall-vars vars)
+                               :clause clause)))
+        ((ruleml-query :term term)
+         (make-ruleml-query :term (flattener term)))
+        (_ (let ((term (flattener term)))
+             (if vars
+                 (make-ruleml-forall :vars vars :clause term)
+                 term)))))))
 
 (defun flatten-and (item)
   "A utility function that flattens And(...) terms within lists."
@@ -1067,7 +1065,6 @@ the documentation of transform-document."
       embedded-objectify
       unnest
       (objectify relationships prefix-ht)
-      (flatten-externals t) ;; we are transforming a query, so the
-                            ;; queryp optional argument is t.
+      flatten-externals
       separate-existential-variables
       describute))

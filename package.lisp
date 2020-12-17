@@ -177,7 +177,6 @@
   (:use #:cl #:psoa-ast #:psoa-grammar #:rutils #:trivia)
   (:export #:*static-objectification-only*
            #:*is-relational-p*
-           #:is-relational-query-p
            #:transform-document
            #:transform-query)
   (:shadowing-import-from :trivia trivia.level2:alist TRIVIA.LEVEL2:@))
