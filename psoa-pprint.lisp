@@ -18,6 +18,9 @@ https://www.cs.cmu.edu/Groups/AI/html/cltl/clm/node253.html
 |#
 
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (setq *print-pretty* t))
+
 (defparameter *inside-psoa-rest* nil
   "A contextual flag / boolean indicating whether the subterms of a
 PSOA RuleML atom or expression are currently being printed.")
@@ -46,7 +49,8 @@ PSOA RuleML atom or expression are currently being printed.")
     (pprint-indent :block (- (length "RuleML(")) stream)
     (pprint-newline :mandatory stream)))
 
-(set-pprint-dispatch 'ruleml-document 'pprint-ruleml-document)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-document 'pprint-ruleml-document))
 
 (defun pprint-ruleml-base (stream base)
   (pprint-logical-block (stream nil :prefix "Base(" :suffix ")")
@@ -54,7 +58,8 @@ PSOA RuleML atom or expression are currently being printed.")
     (write (ruleml-base-iri-ref base) :stream stream :escape nil)
     (write-char #\> stream)))
 
-(set-pprint-dispatch 'ruleml-base 'pprint-ruleml-base)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-base 'pprint-ruleml-base))
 
 (defun pprint-ruleml-prefix (stream prefix)
   (pprint-logical-block (stream nil :prefix "Prefix(" :suffix ")")
@@ -63,19 +68,22 @@ PSOA RuleML atom or expression are currently being printed.")
     (write-char #\: stream)
     (write (ruleml-prefix-iri-ref prefix) :stream stream :escape nil)))
 
-(set-pprint-dispatch 'ruleml-prefix 'pprint-ruleml-prefix)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-prefix 'pprint-ruleml-prefix))
 
 (defun pprint-ruleml-const (stream const)
   (write (ruleml-const-contents const) :stream stream :escape nil))
 
-(set-pprint-dispatch 'ruleml-const 'pprint-ruleml-const)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-const 'pprint-ruleml-const))
 
 (defun pprint-ruleml-string (stream string)
   (write-char #\" stream)
   (write (ruleml-string-contents string) :stream stream)
   (write-char #\" stream))
 
-(set-pprint-dispatch 'ruleml-string 'pprint-ruleml-string)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-string 'pprint-ruleml-string))
 
 (defun pprint-ruleml-import (stream import)
   (pprint-logical-block (stream nil :prefix "Import(" :suffix ")")
@@ -87,7 +95,8 @@ PSOA RuleML atom or expression are currently being printed.")
       (write-char #\Space stream)
       (write it :stream stream))))
 
-(set-pprint-dispatch 'ruleml-import 'pprint-ruleml-import)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-import 'pprint-ruleml-import))
 
 (defun pprint-ruleml-assert (stream assert)
   (pprint-logical-block (stream nil :prefix "Assert(" :suffix ")")
@@ -102,33 +111,39 @@ PSOA RuleML atom or expression are currently being printed.")
     (pprint-indent :block (- (length "Assert(")) stream)
     (pprint-newline :mandatory stream)))
 
-(set-pprint-dispatch 'ruleml-assert 'pprint-ruleml-assert)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-assert 'pprint-ruleml-assert))
 
 (defun pprint-ruleml-query (stream query)
   (pprint-logical-block (stream nil :prefix "Query(" :suffix ")")
     (write (ruleml-query-term query) :stream stream)))
 
-(set-pprint-dispatch 'ruleml-query 'pprint-ruleml-query)
+(eval-when (:compile-toplevel :load-toplevel :execute) (set-pprint-dispatch 'ruleml-query 'pprint-ruleml-query))
 
 (defun pprint-ruleml-naf (stream formula)
   (pprint-logical-block (stream nil :prefix "Naf(" :suffix ")")
     (write (ruleml-naf-formula formula) :stream stream)))
 
-(set-pprint-dispatch 'ruleml-naf 'pprint-ruleml-naf)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-naf 'pprint-ruleml-naf))
 
 (defun pprint-ruleml-var (stream var)
   (write-char #\? stream)
   (write (ruleml-var-name var) :stream stream :escape nil))
 
-(set-pprint-dispatch 'ruleml-var 'pprint-ruleml-var)
-(set-pprint-dispatch 'ruleml-genvar 'pprint-ruleml-var)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-var 'pprint-ruleml-var))
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-genvar 'pprint-ruleml-var))
 
 (defun pprint-ruleml-slot (stream slot)
   (write (ruleml-slot-name slot) :stream stream)
   (write-string (if (ruleml-slot-dep slot) "+>" "->") stream)
   (write (ruleml-slot-filler slot) :stream stream))
 
-(set-pprint-dispatch 'ruleml-slot 'pprint-ruleml-slot)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-slot 'pprint-ruleml-slot))
 
 (defun pprint-ruleml-tuple (stream tuple)
   (write-string (if (ruleml-tuple-dep tuple) "+" "-") stream)
@@ -136,7 +151,8 @@ PSOA RuleML atom or expression are currently being printed.")
   (pprint-fill stream (ruleml-tuple-terms tuple) nil)
   (write-char #\] stream))
 
-(set-pprint-dispatch 'ruleml-tuple 'pprint-ruleml-tuple)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-tuple 'pprint-ruleml-tuple))
 
 (defun pprint-ruleml-pname-ln (stream pname-ln)
   (when-it (ruleml-pname-ln-name pname-ln)
@@ -144,7 +160,8 @@ PSOA RuleML atom or expression are currently being printed.")
   (write-char #\: stream)
   (write (ruleml-pname-ln-url pname-ln) :stream stream :escape nil))
 
-(set-pprint-dispatch 'ruleml-pname-ln 'pprint-ruleml-pname-ln)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-pname-ln 'pprint-ruleml-pname-ln))
 
 (defun pprint-ruleml-expr (stream expr)
   (unless (or *inside-psoa-rest* (not *print-caret-before-expr*))
@@ -154,7 +171,8 @@ PSOA RuleML atom or expression are currently being printed.")
     (let ((*inside-psoa-rest* t))
       (pprint-fill stream (ruleml-expr-terms expr) nil))))
 
-(set-pprint-dispatch 'ruleml-expr 'pprint-ruleml-expr)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-expr 'pprint-ruleml-expr))
 
 (defun pprint-ruleml-subclass-rel (stream subclass-rel)
   (write (ruleml-subclass-rel-sub subclass-rel) :stream stream)
@@ -163,14 +181,16 @@ PSOA RuleML atom or expression are currently being printed.")
   (pprint-newline :fill stream)
   (write (ruleml-subclass-rel-super subclass-rel) :stream stream))
 
-(set-pprint-dispatch 'ruleml-subclass-rel 'pprint-ruleml-subclass-rel)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-subclass-rel 'pprint-ruleml-subclass-rel))
 
 (defun pprint-ruleml-equal (stream equal)
   (write (ruleml-equal-left equal) :stream stream)
   (write-char #\= stream)
   (write (ruleml-equal-right equal) :stream stream))
 
-(set-pprint-dispatch 'ruleml-equal 'pprint-ruleml-equal)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-equal 'pprint-ruleml-equal))
 
 (defun pprint-ruleml-atom (stream atom)
   (when *inside-psoa-rest*
@@ -185,7 +205,8 @@ PSOA RuleML atom or expression are currently being printed.")
           (pprint-fill stream it))))
   (pprint-newline :fill stream))
 
-(set-pprint-dispatch 'ruleml-atom 'pprint-ruleml-atom)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-atom 'pprint-ruleml-atom))
 
 (defun pprint-ruleml-oidful-atom (stream atom)
   (write (ruleml-oidful-atom-oid atom) :stream stream)
@@ -193,7 +214,8 @@ PSOA RuleML atom or expression are currently being printed.")
     (write-char #\# stream))
   (write (ruleml-oidful-atom-predicate atom) :stream stream))
 
-(set-pprint-dispatch 'ruleml-oidful-atom 'pprint-ruleml-oidful-atom)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-oidful-atom 'pprint-ruleml-oidful-atom))
 
 (defun pprint-ruleml-forall (stream clause)
   (let* ((forall-prefix (format nil "Forall ~{~a~^ ~} (" (ruleml-forall-vars clause)))
@@ -205,7 +227,8 @@ PSOA RuleML atom or expression are currently being printed.")
       (pprint-indent :block (- prefix-length) stream)
       (pprint-newline :mandatory stream))))
 
-(set-pprint-dispatch 'ruleml-forall 'pprint-ruleml-forall)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-forall 'pprint-ruleml-forall))
 
 (defun pprint-ruleml-implies (stream implies)
   (write (ruleml-implies-conclusion implies) :stream stream)
@@ -214,7 +237,8 @@ PSOA RuleML atom or expression are currently being printed.")
   (write-char #\Space stream)
   (write (ruleml-implies-condition implies) :stream stream))
 
-(set-pprint-dispatch 'ruleml-implies 'pprint-ruleml-implies)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-implies 'pprint-ruleml-implies))
 
 (defun pprint-ruleml-and (stream item)
   (pprint-logical-block (stream nil :prefix "And(" :suffix ")")
@@ -224,7 +248,8 @@ PSOA RuleML atom or expression are currently being printed.")
     (pprint-indent :block (- (length "And(")) stream)
     (pprint-newline :mandatory stream)))
 
-(set-pprint-dispatch 'ruleml-and 'pprint-ruleml-and)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-and 'pprint-ruleml-and))
 
 (defun pprint-ruleml-or (stream item)
   (pprint-logical-block (stream nil :prefix "Or(" :suffix ")")
@@ -234,42 +259,48 @@ PSOA RuleML atom or expression are currently being printed.")
     (pprint-indent :block (- (length "Or(")) stream)
     (pprint-newline :mandatory stream)))
 
-(set-pprint-dispatch 'ruleml-or 'pprint-ruleml-or)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-or 'pprint-ruleml-or))
 
 (defun pprint-ruleml-exists (stream clause)
   (let* ((exists-prefix (format nil "Exists ~{~a~^ ~} (" (ruleml-exists-vars clause)))
          (prefix-length (length exists-prefix)))
-   (pprint-logical-block (stream nil :prefix exists-prefix :suffix ")")
-     (pprint-indent :block (+ (- prefix-length) 4) stream)
-     (pprint-newline :mandatory stream)
-     (write (ruleml-exists-formula clause) :stream stream)
-     (pprint-indent :block (- prefix-length) stream)
-     (pprint-newline :mandatory stream))))
+    (pprint-logical-block (stream nil :prefix exists-prefix :suffix ")")
+      (pprint-indent :block (+ (- prefix-length) 4) stream)
+      (pprint-newline :mandatory stream)
+      (write (ruleml-exists-formula clause) :stream stream)
+      (pprint-indent :block (- prefix-length) stream)
+      (pprint-newline :mandatory stream))))
 
-(set-pprint-dispatch 'ruleml-exists 'pprint-ruleml-exists)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-exists 'pprint-ruleml-exists))
 
 (defun pprint-ruleml-external (stream external)
   (pprint-logical-block (stream nil :prefix "External(" :suffix ")")
     (pprint-indent :block 4 stream)
     (write (ruleml-external-atom external) :stream stream)))
 
-(set-pprint-dispatch 'ruleml-external 'pprint-ruleml-external)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-external 'pprint-ruleml-external))
 
 (defun pprint-ruleml-membership (stream membership)
   (write (ruleml-membership-oid membership) :stream stream)
   (write-char #\# stream)
   (write (ruleml-membership-predicate membership) :stream stream))
 
-(set-pprint-dispatch 'ruleml-membership 'pprint-ruleml-membership)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-membership 'pprint-ruleml-membership))
 
 (defun pprint-ruleml-number (stream number)
   (write (ruleml-number-value number) :stream stream))
 
-(set-pprint-dispatch 'ruleml-number 'pprint-ruleml-number)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-number 'pprint-ruleml-number))
 
 (defun pprint-ruleml-iri (stream iri)
   (write-string "<" stream)
   (write-string (ruleml-iri-contents iri) stream)
   (write-string ">" stream))
 
-(set-pprint-dispatch 'ruleml-iri 'pprint-ruleml-iri)
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-pprint-dispatch 'ruleml-iri 'pprint-ruleml-iri))
