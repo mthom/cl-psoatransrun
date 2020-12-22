@@ -1,4 +1,3 @@
-
 (in-package #:psoa-grammar)
 
 #|
@@ -862,7 +861,7 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
 
 (defrule iri-ref-char
     (not (or #\< #\> #\" #\{ #\} #\| #\^ #\` #\\
-             (character-ranges (#\u0000 #\u0020)))))
+             (character-ranges (#.(code-char #x0000) #.(code-char #x0020))))))
 
 (defrule pn-local
     (and (or pn-chars-u
@@ -875,26 +874,26 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
     (or pn-chars-u
         minus-sign
         digit
-        #\u00b7
-        (character-ranges (#\u0300 #\u036f))
-        (character-ranges (#\u203f #\u2040))))
+        #.(code-char #x00b7)
+        (character-ranges (#.(code-char #x0300) #.(code-char #x036f)))
+        (character-ranges (#.(code-char #x203f) #.(code-char #x2040)))))
 
 (defrule pn-chars-u
     (or pn-chars-base #\_))
 
 (defrule pn-chars-base
     (or alpha
-        (character-ranges (#\u00C0 #\u00D6))
-        (character-ranges (#\u00d8 #\u00f6))
-        (character-ranges (#\u00f8 #\u02ff))
-        (character-ranges (#\u0370 #\u037d))
-        (character-ranges (#\u037f #\u1fff))
-        (character-ranges (#\u200c #\u200d))
-        (character-ranges (#\u2070 #\u218f))
-        (character-ranges (#\u2c00 #\u2fef))
-        (character-ranges (#\u3001 #\ud7ff))
-        (character-ranges (#\uf900 #\ufdcf))
-        (character-ranges (#\ufdf0 #\ufffd))))
+        (character-ranges (#.(code-char #x00C0) #.(code-char #x00D6)))
+        (character-ranges (#.(code-char #x00d8) #.(code-char #x00f6)))
+        (character-ranges (#.(code-char #x00f8) #.(code-char #x02ff)))
+        (character-ranges (#.(code-char #x0370) #.(code-char #x037d)))
+        (character-ranges (#.(code-char #x037f) #.(code-char #x1fff)))
+        (character-ranges (#.(code-char #x200c) #.(code-char #x200d)))
+        (character-ranges (#.(code-char #x2070) #.(code-char #x218f)))
+        (character-ranges (#.(code-char #x2c00) #.(code-char #x2fef)))
+        (character-ranges (#.(code-char #x3001) #.(code-char #xd7ff)))
+        (character-ranges (#.(code-char #xf900) #.(code-char #xfdcf)))
+        (character-ranges (#.(code-char #xfdf0) #.(code-char #xfffd)))))
 
 (defrule plx
     (or percent pn-local-esc))
@@ -960,115 +959,105 @@ is not in left-implicit-tuple normal form (LITNF). Raise an error if
     (or alpha digit #\. minus-sign #\_ combining-char extender))
 
 (defrule combining-char
-    (or (character-ranges (#\combining_grave_accent
-                           #\combining_greek_ypogegrammeni))
-        (character-ranges (#\combining_double_tilde
-                           #\combining_double_inverted_breve))
-        (character-ranges (#\combining_cyrillic_titlo
-                           #\combining_cyrillic_psili_pneumata))
-        (character-ranges (#\hebrew_accent_etnahta #\hebrew_accent_pazer))
-        (character-ranges (#\hebrew_accent_munah #\hebrew_point_holam))
-        (character-ranges (#\hebrew_point_qubuts #\hebrew_point_meteg))
-        #\hebrew_point_rafe
-        (character-ranges (#\hebrew_point_shin_dot #\hebrew_point_sin_dot))
-        #\hebrew_mark_upper_dot
-        (character-ranges (#\arabic_fathatan #\arabic_sukun))
-        #\arabic_letter_superscript_alef
-        (character-ranges
-         (#\arabic_small_high_ligature_sad_with_lam_with_alef_maksura
-          #\arabic_small_high_seen))
-        (character-ranges (#\arabic_end_of_ayah #\arabic_small_high_rounded_zero))
-        (character-ranges (#\arabic_small_high_upright_rectangular_zero
-                           #\arabic_small_high_madda))
-        (character-ranges (#\arabic_small_high_yeh #\arabic_small_high_noon))
-        (character-ranges (#\arabic_empty_centre_low_stop #\arabic_small_low_meem))
-        (character-ranges (#\devanagari_sign_candrabindu #\devanagari_sign_visarga))
-        #\devanagari_sign_nukta
-        (character-ranges (#\devanagari_vowel_sign_aa #\devanagari_vowel_sign_au))
-        #\devanagari_sign_virama
-        (character-ranges (#\devanagari_stress_sign_udatta
-                           #\devanagari_acute_accent))
-        (character-ranges (#\devanagari_vowel_sign_vocalic_l
-                           #\devanagari_vowel_sign_vocalic_ll))
-        (character-ranges (#\bengali_sign_candrabindu #\bengali_sign_visarga))
-        #\bengali_sign_nukta #\bengali_vowel_sign_aa #\bengali_vowel_sign_i
-        (character-ranges (#\bengali_vowel_sign_ii #\bengali_vowel_sign_vocalic_rr))
-        (character-ranges (#\bengali_vowel_sign_e #\bengali_vowel_sign_ai))
-        (character-ranges (#\bengali_vowel_sign_o #\bengali_sign_virama))
-        #\bengali_au_length_mark
-        (character-ranges (#\bengali_vowel_sign_vocalic_l
-                           #\bengali_vowel_sign_vocalic_ll))
-        #\gurmukhi_sign_bindi #\gurmukhi_sign_nukta #\gurmukhi_vowel_sign_aa
-        #\gurmukhi_vowel_sign_i
-        (character-ranges (#\gurmukhi_vowel_sign_ii #\gurmukhi_vowel_sign_uu))
-        (character-ranges (#\gurmukhi_vowel_sign_ee #\gurmukhi_vowel_sign_ai))
-        (character-ranges (#\gurmukhi_vowel_sign_oo #\gurmukhi_sign_virama))
-        (character-ranges (#\gurmukhi_tippi #\gurmukhi_addak))
-        (character-ranges (#\gujarati_sign_candrabindu #\gujarati_sign_visarga))
-        #\gujarati_sign_nukta
-        (character-ranges (#\gujarati_vowel_sign_aa #\gujarati_vowel_sign_candra_e))
-        (character-ranges (#\gujarati_vowel_sign_e #\gujarati_vowel_sign_candra_o))
-        (character-ranges (#\gujarati_vowel_sign_o #\gujarati_sign_virama))
-        (character-ranges (#\oriya_sign_candrabindu #\oriya_sign_visarga))
-        #\oriya_sign_nukta
-        (character-ranges (#\oriya_vowel_sign_aa #\oriya_vowel_sign_vocalic_r))
-        (character-ranges (#\oriya_vowel_sign_e #\oriya_vowel_sign_ai))
-        (character-ranges (#\oriya_vowel_sign_o #\oriya_sign_virama))
-        (character-ranges (#\oriya_ai_length_mark #\oriya_au_length_mark))
-        (character-ranges (#\tamil_sign_anusvara #\tamil_sign_visarga))
-        (character-ranges (#\tamil_vowel_sign_aa #\tamil_vowel_sign_uu))
-        (character-ranges (#\tamil_vowel_sign_e #\tamil_vowel_sign_ai))
-        (character-ranges (#\tamil_vowel_sign_o #\tamil_sign_virama))
-        #\tamil_au_length_mark
-        (character-ranges (#\telugu_sign_candrabindu #\telugu_sign_visarga))
-        (character-ranges (#\telugu_vowel_sign_aa #\telugu_vowel_sign_vocalic_rr))
-        (character-ranges (#\telugu_vowel_sign_e #\telugu_vowel_sign_ai))
-        (character-ranges (#\telugu_vowel_sign_o #\telugu_sign_virama))
-        (character-ranges (#\telugu_length_mark #\telugu_ai_length_mark))
-        (character-ranges (#\kannada_sign_anusvara #\kannada_sign_visarga))
-        (character-ranges (#\kannada_vowel_sign_aa #\kannada_vowel_sign_vocalic_rr))
-        (character-ranges (#\kannada_vowel_sign_e #\kannada_vowel_sign_ai))
-        (character-ranges (#\kannada_vowel_sign_o #\kannada_sign_virama))
-        (character-ranges (#\kannada_length_mark #\kannada_ai_length_mark))
-        (character-ranges (#\malayalam_sign_anusvara #\malayalam_sign_visarga))
-        (character-ranges (#\malayalam_vowel_sign_aa
-                           #\malayalam_vowel_sign_vocalic_r))
-        (character-ranges (#\malayalam_vowel_sign_e #\malayalam_vowel_sign_ai))
-        (character-ranges (#\malayalam_vowel_sign_o #\malayalam_sign_virama))
-        #\malayalam_au_length_mark #\thai_character_mai_han-akat
-        (character-ranges (#\thai_character_sara_i #\thai_character_phinthu))
-        (character-ranges (#\thai_character_maitaikhu #\thai_character_yamakkan))
-        #\lao_vowel_sign_mai_kan
-        (character-ranges (#\lao_vowel_sign_i #\lao_vowel_sign_uu))
-        (character-ranges (#\lao_vowel_sign_mai_kon #\lao_semivowel_sign_lo))
-        (character-ranges (#\lao_tone_mai_ek #\lao_niggahita))
-        (character-ranges (#\tibetan_astrological_sign_-khyud_pa
-                           #\tibetan_astrological_sign_sdong_tshugs))
-        #\tibetan_mark_ngas_bzung_nyi_zla #\tibetan_mark_ngas_bzung_sgor_rtags
-        #\tibetan_mark_tsa_-phru #\tibetan_sign_yar_tshes #\tibetan_sign_mar_tshes
-        (character-ranges (#\tibetan_vowel_sign_aa #\tibetan_mark_halanta))
-        (character-ranges (#\tibetan_sign_lci_rtags #\tibetan_sign_gru_med_rgyings))
-        (character-ranges (#\tibetan_subjoined_letter_ka
-                           #\tibetan_subjoined_letter_ca))
-        #\tibetan_subjoined_letter_ja
-        (character-ranges (#\tibetan_subjoined_letter_nya
-                           #\tibetan_subjoined_letter_wa))
-        (character-ranges (#\tibetan_subjoined_letter_ya
-                           #\tibetan_subjoined_letter_ha))
-        #\tibetan_subjoined_letter_kssa
-        (character-ranges (#\combining_left_harpoon_above
-                           #\combining_four_dots_above))
-        #\combining_left_right_arrow_above
-        (character-ranges (#\ideographic_level_tone_mark
-                           #\hangul_double_dot_tone_mark))
-        #\combining_katakana-hiragana_voiced_sound_mark
-        #\combining_katakana-hiragana_semi-voiced_sound_mark))
+    (or (character-ranges (#.(code-char #x0300) #.(code-char #x0345)))
+        (character-ranges (#.(code-char #x0360) #.(code-char #x0361)))
+        (character-ranges (#.(code-char #x0483) #.(code-char #x0486)))
+        (character-ranges (#.(code-char #x0591) #.(code-char #x05A1)))
+        (character-ranges (#.(code-char #x05A3) #.(code-char #x05B9)))
+        (character-ranges (#.(code-char #x05BB) #.(code-char #x05BD)))
+        #.(code-char #x05BF)
+        (character-ranges (#.(code-char #x05C1) #.(code-char #x05C2)))
+        #.(code-char #x05C4)
+        (character-ranges (#.(code-char #x064B) #.(code-char #x0652)))
+        #.(code-char #x0670)
+        (character-ranges (#.(code-char #x06D6) #.(code-char #x06DC)))
+        (character-ranges (#.(code-char #x06DD) #.(code-char #x06DF)))
+        (character-ranges (#.(code-char #x06E0) #.(code-char #x06E4)))
+        (character-ranges (#.(code-char #x06E7) #.(code-char #x06E8)))
+        (character-ranges (#.(code-char #x06EA) #.(code-char #x06ED)))
+        (character-ranges (#.(code-char #x0901) #.(code-char #x0903)))
+        #.(code-char #x093C)
+        (character-ranges (#.(code-char #x093E) #.(code-char #x094C)))
+        #.(code-char #x094D)
+        (character-ranges (#.(code-char #x0951) #.(code-char #x0954)))
+        (character-ranges (#.(code-char #x0962) #.(code-char #x0963)))
+        (character-ranges (#.(code-char #x0981) #.(code-char #x0983)))
+        #.(code-char #x09BC)
+        #.(code-char #x09BE)
+        #.(code-char #x09BF)
+        (character-ranges (#.(code-char #x09C0) #.(code-char #x09C4)))
+        (character-ranges (#.(code-char #x09C7) #.(code-char #x09C8)))
+        (character-ranges (#.(code-char #x09CB) #.(code-char #x09CD)))
+        #.(code-char #x09D7)
+        (character-ranges (#.(code-char #x09E2) #.(code-char #x09E3)))
+        #.(code-char #x0A02)
+        #.(code-char #x0A3C)
+        #.(code-char #x0A3E)
+        #.(code-char #x0A3F)
+        (character-ranges (#.(code-char #x0A40) #.(code-char #x0A42)))
+        (character-ranges (#.(code-char #x0A47) #.(code-char #x0A48)))
+        (character-ranges (#.(code-char #x0A4B) #.(code-char #x0A4D)))
+        (character-ranges (#.(code-char #x0A70) #.(code-char #x0A71)))
+        (character-ranges (#.(code-char #x0A81) #.(code-char #x0A83)))
+        #.(code-char #x0ABC)
+        (character-ranges (#.(code-char #x0ABE) #.(code-char #x0AC5)))
+        (character-ranges (#.(code-char #x0AC7) #.(code-char #x0AC9)))
+        (character-ranges (#.(code-char #x0ACB) #.(code-char #x0ACD)))
+        (character-ranges (#.(code-char #x0B01) #.(code-char #x0B03)))
+        #.(code-char #x0B3C)
+        (character-ranges (#.(code-char #x0B3E) #.(code-char #x0B43)))
+        (character-ranges (#.(code-char #x0B47) #.(code-char #x0B48)))
+        (character-ranges (#.(code-char #x0B4B) #.(code-char #x0B4D)))
+        (character-ranges (#.(code-char #x0B56) #.(code-char #x0B57)))
+        (character-ranges (#.(code-char #x0B82) #.(code-char #x0B83)))
+        (character-ranges (#.(code-char #x0BBE) #.(code-char #x0BC2)))
+        (character-ranges (#.(code-char #x0BC6) #.(code-char #x0BC8)))
+        (character-ranges (#.(code-char #x0BCA) #.(code-char #x0BCD)))
+        #.(code-char #x0BD7)
+        (character-ranges (#.(code-char #x0C01) #.(code-char #x0C03)))
+        (character-ranges (#.(code-char #x0C3E) #.(code-char #x0C44)))
+        (character-ranges (#.(code-char #x0C46) #.(code-char #x0C48)))
+        (character-ranges (#.(code-char #x0C4A) #.(code-char #x0C4D)))
+        (character-ranges (#.(code-char #x0C55) #.(code-char #x0C56)))
+        (character-ranges (#.(code-char #x0C82) #.(code-char #x0C83)))
+        (character-ranges (#.(code-char #x0CBE) #.(code-char #x0CC4)))
+        (character-ranges (#.(code-char #x0CC6) #.(code-char #x0CC8)))
+        (character-ranges (#.(code-char #x0CCA) #.(code-char #x0CCD)))
+        (character-ranges (#.(code-char #x0CD5) #.(code-char #x0CD6)))
+        (character-ranges (#.(code-char #x0D02) #.(code-char #x0D03)))
+        (character-ranges (#.(code-char #x0D3E) #.(code-char #x0D43)))
+        (character-ranges (#.(code-char #x0D46) #.(code-char #x0D48)))
+        (character-ranges (#.(code-char #x0D4A) #.(code-char #x0D4D)))
+        #.(code-char #x0D57)
+        #.(code-char #x0E31)
+        (character-ranges (#.(code-char #x0E34) #.(code-char #x0E3A)))
+        (character-ranges (#.(code-char #x0E47) #.(code-char #x0E4E)))
+        #.(code-char #x0EB1)
+        (character-ranges (#.(code-char #x0EB4) #.(code-char #x0EB9)))
+        (character-ranges (#.(code-char #x0EBB) #.(code-char #x0EBC)))
+        (character-ranges (#.(code-char #x0EC8) #.(code-char #x0ECD)))
+        (character-ranges (#.(code-char #x0F18) #.(code-char #x0F19)))
+        #.(code-char #x0F35)
+        #.(code-char #x0F37)
+        #.(code-char #x0F39)
+        #.(code-char #x0F3E)
+        #.(code-char #x0F3F)
+        (character-ranges (#.(code-char #x0F71) #.(code-char #x0F84)))
+        (character-ranges (#.(code-char #x0F86) #.(code-char #x0F8B)))
+        (character-ranges (#.(code-char #x0F90) #.(code-char #x0F95)))
+        #.(code-char #x0F97)
+        (character-ranges (#.(code-char #x0F99) #.(code-char #x0FAD)))
+        (character-ranges (#.(code-char #x0FB1) #.(code-char #x0FB7)))
+        #.(code-char #x0FB9) (character-ranges (#.(code-char #x20D0) #.(code-char #x20DC)))
+        #.(code-char #x20E1) (character-ranges (#.(code-char #x302A) #.(code-char #x302F)))
+        #.(code-char #x3099)
+        #.(code-char #x309A)))
 
 (defrule extender
-    (or #\u00B7 #\u02D0 #\u02D1 #\u0387 #\u0640 #\u0E46 #\u0EC6 #\u3005
-        (character-ranges (#\u3031 #\u3035))
-        (character-ranges (#\u309D #\u309E))
-        (character-ranges (#\u30FC #\u30FE))))
+    (or #.(code-char #x00B7) #.(code-char #x02D0) #.(code-char #x02D1) #.(code-char #x0387) #.(code-char #x0640) #.(code-char #x0E46) #.(code-char #x0EC6) #.(code-char #x3005)
+        (character-ranges (#.(code-char #x3031) #.(code-char #x3035)))
+        (character-ranges (#.(code-char #x309D) #.(code-char #x309E)))
+        (character-ranges (#.(code-char #x30FC) #.(code-char #x30FE)))))
 
 (defrule numeric-literal
     (and (or numeric-literal-positive
